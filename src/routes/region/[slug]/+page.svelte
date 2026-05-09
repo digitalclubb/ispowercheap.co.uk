@@ -3,16 +3,36 @@
 	import Footer from '$lib/components/Footer.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
-	import { formatTime } from '$lib/format.js';
+	import Timestamps from '$lib/components/Timestamps.svelte';
+	import { startPolling } from '$lib/livePolling.js';
 	import { siblingLocations } from '$lib/locations.js';
 	import { describeAnswer, faqJsonLd, locationJsonLd, ORIGIN } from '$lib/seo.js';
 	import { STATE_HEADLINE, STATE_WORD } from '$lib/state.js';
 	import { THEME_COLOR } from '$lib/theme.js';
+	import type { NowAnswer } from '$lib/types.js';
 	import type { PageData } from './$types.js';
 
 	let { data }: { data: PageData } = $props();
-	const answer = $derived(data.answer);
+
+	let polledAnswer = $state<NowAnswer | null>(null);
+	const answer = $derived(polledAnswer ?? data.answer);
 	const location = $derived(data.location);
+
+	$effect(() => {
+		// Reset polled state when navigation lands us on a different region.
+		data.answer.region.label;
+		polledAnswer = null;
+	});
+
+	$effect(() => {
+		const url = `/api/now?postcode=${encodeURIComponent(location.postcode)}`;
+		return startPolling({
+			url,
+			onUpdate: (next) => {
+				polledAnswer = next;
+			},
+		});
+	});
 
 	const canonicalUrl = $derived(`${ORIGIN}/region/${location.slug}`);
 	const ogImage = $derived(`${ORIGIN}/og.png?postcode=${encodeURIComponent(location.postcode)}`);
@@ -70,11 +90,7 @@
 				{answer.current.forecast}&thinsp;gCO₂/kWh
 			</p>
 		{/if}
-		{#if isStale && answer.current}
-			<p class="micro stale" role="status">
-				data may be stale — last update {formatTime(answer.current.from)}
-			</p>
-		{/if}
+		<Timestamps current={answer.current} {isStale} />
 		<p class="region-pill">
 			{location.name} · DNO {location.dnoCode} · {location.dnoName}
 		</p>
@@ -214,10 +230,6 @@
 		opacity: var(--opacity-tertiary);
 		margin: 0;
 		font-variant-numeric: tabular-nums;
-	}
-	.micro.stale {
-		opacity: var(--opacity-secondary);
-		font-style: italic;
 	}
 	.region-pill {
 		font-size: var(--micro-size);

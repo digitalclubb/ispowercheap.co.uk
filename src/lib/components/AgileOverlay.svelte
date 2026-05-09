@@ -82,7 +82,11 @@
 		<span class="region">on Agile · {regionName(config.region)}</span>
 	</p>
 {:else if config?.enabled && loading}
-	<p class="price loading">loading Agile price…</p>
+	<p class="price loading" aria-live="polite" aria-busy="true">
+		<span class="visually-hidden">loading Agile price</span>
+		<span class="skeleton skeleton-figure" aria-hidden="true"></span>
+		<span class="skeleton skeleton-region" aria-hidden="true"></span>
+	</p>
 {:else if config?.enabled && error}
 	<p class="price error">{error}</p>
 {/if}
@@ -132,10 +136,50 @@
 		opacity: var(--opacity-tertiary);
 		margin-top: var(--space-1);
 	}
-	.price.loading,
+	.price.loading {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+	}
 	.price.error {
 		font-size: var(--micro-size);
 		opacity: var(--opacity-tertiary);
+	}
+	.skeleton {
+		display: block;
+		background: var(--surface-soft);
+		border-radius: 4px;
+		animation: skeleton-pulse 1.6s ease-in-out infinite;
+	}
+	.skeleton-figure {
+		width: 5ch;
+		height: 1.6em;
+	}
+	.skeleton-region {
+		width: 12ch;
+		height: 0.9em;
+		opacity: 0.7;
+	}
+	@keyframes skeleton-pulse {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
+	}
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+		border: 0;
 	}
 	.agile-toggle {
 		display: inline-flex;

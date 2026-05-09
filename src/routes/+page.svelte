@@ -1,18 +1,34 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import ActionChips from '$lib/components/ActionChips.svelte';
 	import AgileOverlay from '$lib/components/AgileOverlay.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import RegionPicker from '$lib/components/RegionPicker.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
-	import { formatTime } from '$lib/format.js';
+	import Timestamps from '$lib/components/Timestamps.svelte';
+	import { startPolling } from '$lib/livePolling.js';
 	import { describeAnswer, faqJsonLd, ORIGIN, websiteJsonLd } from '$lib/seo.js';
+	import { refineRegionSilently } from '$lib/silentGeo.js';
 	import { STATE_HEADLINE, STATE_WORD } from '$lib/state.js';
 	import { THEME_COLOR } from '$lib/theme.js';
+	import type { NowAnswer } from '$lib/types.js';
 	import type { PageData } from './$types.js';
 
 	let { data }: { data: PageData } = $props();
-	const answer = $derived(data.answer);
+
+	// Live-polled answer overrides the SSR'd one when present. We reset it to
+	// null on navigation so a region change doesn't keep showing stale data
+	// from the previous URL.
+	let polledAnswer = $state<NowAnswer | null>(null);
+	const answer = $derived(polledAnswer ?? data.answer);
+
+	$effect(() => {
+		// Touch the SSR answer's region label to subscribe — when navigation
+		// re-runs the load function with a new region, this clears the poll.
+		data.answer.region.label;
+		polledAnswer = null;
+	});
 
 	// Stale-data warning: Carbon Intensity publishes every 30 min, so a settlement
 	// period older than 45 min suggests the upstream feed has stalled. We only
@@ -22,6 +38,32 @@
 		if (!answer.current?.from) return false;
 		const ageMs = Date.now() - new Date(answer.current.from).getTime();
 		return ageMs > 45 * 60 * 1000;
+	});
+
+	// Live polling: refresh /api/now every 5 minutes while the tab is visible.
+	// State changes cross-fade automatically via the `main` element's CSS
+	// transition on `background-color`/`color`.
+	$effect(() => {
+		const params = new URLSearchParams();
+		const postcode = answer.region.postcode;
+		if (postcode) params.set('postcode', postcode);
+		const url = `/api/now${params.size ? `?${params.toString()}` : ''}`;
+		return startPolling({
+			url,
+			onUpdate: (next) => {
+				polledAnswer = next;
+			},
+		});
+	});
+
+	// Silent geolocation refinement (best practice — no auto-prompt). Runs once
+	// on hydration; only acts if the user has previously granted geolocation
+	// permission for this origin. Only on the home page when no explicit
+	// `?postcode=` is set — we never override the user's deliberate choice.
+	$effect(() => {
+		const hasExplicitPostcode = page.url.searchParams.has('postcode');
+		if (hasExplicitPostcode) return;
+		void refineRegionSilently(answer.region.postcode);
 	});
 
 	// Periodic Background Sync — supported in Chromium-only PWA contexts. We
@@ -96,11 +138,7 @@
 				{answer.current.forecast}&thinsp;gCO₂/kWh
 			</p>
 		{/if}
-		{#if isStale && answer.current}
-			<p class="micro stale" role="status">
-				data may be stale — last update {formatTime(answer.current.from)}
-			</p>
-		{/if}
+		<Timestamps current={answer.current} {isStale} />
 		<div class="agile-wrap">
 			<AgileOverlay />
 		</div>
@@ -193,10 +231,6 @@
 		opacity: var(--opacity-tertiary);
 		margin: 0;
 		font-variant-numeric: tabular-nums;
-	}
-	.micro.stale {
-		opacity: var(--opacity-secondary);
-		font-style: italic;
 	}
 	.agile-wrap {
 		margin-top: var(--space-2);
