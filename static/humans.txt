@@ -1,0 +1,18 @@
+/* TEAM */
+Site:    ispowercheap.co.uk
+Domain:  ispowercheap.co.uk
+Country: United Kingdom
+
+/* THANKS */
+National Energy System Operator (NESO) — carbon intensity data, CC BY 4.0
+University of Oxford — Department of Computer Science, carbon intensity model
+WWF — public engagement on grid carbon
+EDF — research collaboration on carbon intensity API
+Octopus Energy — open public Agile tariff API
+Postcodes.io — free UK postcode lookup
+rsms.me/inter — Inter typeface (OFL)
+
+/* SITE */
+Last update: 2026
+Standards:   HTML5, CSS3, ES2024
+Tech:        SvelteKit, TypeScript, vanilla CSS, Vercel

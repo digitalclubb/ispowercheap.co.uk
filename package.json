@@ -1,0 +1,44 @@
+{
+	"name": "ispowercheap",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"ci": "biome ci .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"subset": "node scripts/subset-font.mjs",
+		"icons": "node scripts/generate-icons.mjs"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.14",
+		"@sveltejs/adapter-vercel": "^6.3.3",
+		"@sveltejs/kit": "^2.59.1",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/node": "^25.6.2",
+		"sharp": "^0.34.5",
+		"subset-font": "^2.5.0",
+		"svelte": "^5.55.5",
+		"svelte-check": "^4.4.8",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.11",
+		"vitest": "^4.1.5"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@biomejs/biome",
+			"esbuild",
+			"sharp"
+		]
+	}
+}

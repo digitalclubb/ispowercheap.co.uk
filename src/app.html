@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en-GB">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<!-- Brand-level fallback description. Each page sets a more specific
+			 <meta name="description"> via <svelte:head> which Google generally
+			 prefers; this exists so a future route that forgets one still
+			 ships *something*. -->
+		<meta
+			name="description"
+			content="Is electricity cheap right now? Live, plain-English answer for UK households — based on real-time grid carbon intensity from the National Energy System Operator."
+		/>
+		<link
+			rel="preload"
+			href="/fonts/inter-900-subset.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="manifest" href="/manifest.webmanifest" />
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

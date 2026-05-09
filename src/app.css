@@ -1,0 +1,126 @@
+/* ispowercheap.co.uk — global tokens
+ * One source of truth for state colour, typography, spacing.
+ * Headline font is subsetted Inter 900 (~12 glyphs, ~1.7 KB), preloaded.
+ * All other text falls back to system-ui — zero layout shift.
+ */
+
+@font-face {
+	font-family: "Inter";
+	font-style: normal;
+	font-weight: 900;
+	font-display: block;
+	src: url("/fonts/inter-900-subset.woff2") format("woff2");
+	/* the subset only contains: Y E S O R T F N U K W and space */
+	unicode-range:
+		U+0020, U+0045, U+0046, U+004B, U+004E, U+004F, U+0052, U+0053, U+0054, U+0055, U+0057, U+0059;
+}
+
+:root {
+	/* state palette — Okabe-Ito-derived, WCAG AA on the paired text colour
+	 * pairs colour with shape + word so colour-blind users still get the answer */
+	--state-yes-bg: #0e7c3a;
+	--state-yes-fg: #ffffff;
+	--state-sortof-bg: #e69f00;
+	--state-sortof-fg: #1a1a1a;
+	--state-no-bg: #b3261e;
+	--state-no-fg: #ffffff;
+	--state-unknown-bg: #1f2937;
+	--state-unknown-fg: #ffffff;
+
+	/* type scale */
+	--headline-size: clamp(96px, 22vw, 240px);
+	--supporting-size: clamp(16px, 1.6vw, 20px);
+	--micro-size: 13px;
+
+	/* spacing */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 1rem;
+	--space-4: 1.5rem;
+	--space-5: 2rem;
+	--space-6: 3rem;
+
+	/* fonts — system-ui everywhere except the headline */
+	--font-headline: "Inter", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+	--font-body: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+
+	/* opacity steps for hierarchy (keep colour, drop emphasis) */
+	--opacity-secondary: 0.78;
+	--opacity-tertiary: 0.55;
+	--opacity-quaternary: 0.4;
+
+	/* WCAG 2.5.8 Target Size — every interactive element gets at least 44 px */
+	--touch-target: 44px;
+
+	/* tinted-currentColor primitives for borders and surfaces; respect both
+	 * light and dark mode without re-declaring rgba per component */
+	--surface-faint: color-mix(in oklab, currentColor 10%, transparent);
+	--surface-soft: color-mix(in oklab, currentColor 18%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--state-yes-bg: #14a04a;
+		--state-sortof-bg: #f5b020;
+		--state-no-bg: #d2382f;
+		--state-unknown-bg: #2d3a4a;
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	min-height: 100dvh;
+	font-family: var(--font-body);
+	font-size: 16px;
+	line-height: 1.4;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+body {
+	display: flex;
+	flex-direction: column;
+}
+
+a {
+	color: inherit;
+}
+
+button {
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: 0;
+	cursor: pointer;
+	padding: 0;
+}
+
+/* Global focus indicator — meets WCAG 2.4.7 + 2.4.13 against any state colour
+ * because outline uses currentColor (which is always the page foreground). */
+:focus {
+	outline: none;
+}
+:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
+/* respect users who don't want motion */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
