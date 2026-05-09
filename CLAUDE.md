@@ -17,27 +17,61 @@ The full v1 spec lives at `spec.md`. This file holds context that should bias ev
 
 ```
 pnpm dev          # dev server (auto-detects free port)
-pnpm test         # vitest run (chip logic)
+pnpm test         # vitest run (chip logic, parsePoint, locations)
+pnpm check        # svelte-check + tsc (whole repo)
 pnpm build        # vercel-ready build
 pnpm subset       # regen headline font (only if state words change)
-pnpm icons        # regen PWA PNGs from static/icon.svg
+pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 ```
 
 ## Repo conventions
 
-- **State words ever live at `src/lib/state.ts`** — `YES`, `SORT OF`, `NO`, `UNKNOWN`. Adding a new word requires re-running `pnpm subset` so the headline font covers the new glyphs.
-- **Region resolution priority:** URL `?postcode=` → Vercel `x-vercel-ip-postal-code` (when country is GB) → national fallback. Lat/lon → outward happens client-side via postcodes.io to avoid the round trip on cold first paint.
-- **`?state=yes|sortof|no|unknown` is a debug-only override** in `+page.server.ts`. The `/api/now` JSON endpoint deliberately ignores it.
+### State + region
+
+- **State words live at `src/lib/state.ts`** — `YES`, `SORT OF`, `NO`, `UNKNOWN`. Adding a new word requires re-running `pnpm subset` so the headline font covers the new glyphs.
+- **State derivation is the API's `index` field**, not a locally-computed band. `very low`/`low → YES`, `moderate → SORT OF`, `high`/`very high → NO`. The API's national distribution is more authoritative than anything we'd compute.
+- **Region resolution priority** in `src/lib/server/region.ts`: URL `?postcode=` → Vercel `x-vercel-ip-postal-code` (when country is GB) → national fallback. Returns `{ region, source: 'url' | 'header' | 'national' }`; the route handler uses `source` to pick `cacheHeadersFor()`.
+- **`?state=yes|sortof|no|unknown` is a debug-only override** in `+page.server.ts`. The `/api/now` JSON endpoint deliberately ignores it. Cache TTL is computed from the *real* state (pre-override), not the rendered state.
+
+### Cache + abuse defence
+
+- **`cacheHeadersFor(source, state)`** in `src/lib/server/answer.ts` is the single source of truth for `Cache-Control` + `Vary`. Header-derived responses get `private, max-age=60` (never enters Vercel's shared edge cache); URL/national-derived get `public, s-maxage=60, swr=300`. UNKNOWN gets short TTLs (10 s).
+- **`hooks.server.ts canonicalise()`** 308-redirects unknown query params to the canonical URL. Per-pathname allowlist is `ALLOWED_PARAMS`; dynamic routes use `DYNAMIC_NO_PARAM_PATHS` regexes. **It's fail-open** — pathnames not in the table pass through unchanged. When adding a new route, add it to `ALLOWED_PARAMS`.
+- **Security headers** (CSP, HSTS, Referrer-Policy, X-Content-Type-Options, X-Frame-Options, Permissions-Policy) are set centrally in `hooks.server.ts`. CSP keeps `'unsafe-inline'` for script-src + style-src — required by SvelteKit hydration today.
+- **Rate limiting belongs at Vercel WAF**, not in code. Recommend 60 req/min/IP across `/`, `/api/*`, `/og.png`. In-memory limiters on serverless are unreliable across cold-starts.
+
+### Live data
+
+- **Live polling** via `src/lib/livePolling.ts` `startPolling({ url, onUpdate })`. 5-minute interval, gated on `document.visibilityState === 'visible'`. Hidden tabs pause; returning to a hidden tab triggers an immediate refresh + reschedule. State changes cross-fade via the CSS transition on `main`'s `background-color`/`color`.
+- **Polling persists across cache-key boundaries**: when navigating between regions, `polledAnswer` is reset (`$effect` watches `data.answer.region.label`) so stale polled data doesn't bleed across URLs.
+- **Silent geolocation refinement** via `src/lib/silentGeo.ts` `refineRegionSilently(currentPostcode)`. Best practice — **no auto-prompt on page load**. Only acts when `navigator.permissions.query({ name: 'geolocation' })` returns `state: 'granted'`, i.e. for returning visitors. Only on the home page when there's no explicit `?postcode=` (we never override a deliberate user choice).
+- **`Timestamps.svelte`** shows `as of HH:mm · loaded HH:mm`. The "loaded" time is set in a `$effect` that runs once on hydration and intentionally has no reactive deps — it stays at original page-load time, doesn't update with each poll. Polling updates `current.from` (the "as of" time).
+
+### SEO
+
+- **SEO meta** (title, description, canonical, JSON-LD) is per-page via `<svelte:head>`. A brand-level `<meta name="description">` fallback exists in `app.html` so future routes that forget one still ship something; per-page descriptions add specificity Google generally prefers.
+- **`src/lib/seo.ts`** helpers: `describeAnswer(state, locationName?)`, `faqJsonLd()`, `websiteJsonLd()`, `locationJsonLd()` (City for cities, AdministrativeArea for DNO regions), `itemListJsonLd()` (used on `/region` index), `safeJsonLd()` (escapes `<` to defend against `</script>` injection — all helpers route through it). Use these, don't hand-roll.
+- **Location landing pages** at `/region/[slug]` are driven by `src/lib/locations.ts` (44 entries: 14 DNO regions + 30 cities). `findLocation(slug)` resolves; `siblingLocations(current)` computes ~7 deterministic cross-link siblings (same DNO first, popular fillers second). Adding/removing locations auto-updates `/sitemap.xml`. `pnpm test` includes slug-uniqueness, DNO-coverage, postcode-shape and sibling-determinism checks in `locations.test.ts`.
+- **Title shape**: home page is `STATE, headline — brand`; region pages are `Is electricity cheap in {Location}? — brand` (question-shaped to match search queries).
+
+### PWA + assets
+
+- **Brand mark source: `src/lib/assets/bolt.png`** (transparent background expected). `pnpm icons` reads it and writes 8 PNG sizes to `static/`. `og.png` route also reads it via SvelteKit's `read()` for the OG mark.
+- **Sharp powers `/og.png`** (server-rendered 1200×630). It needs the Node.js runtime; do not move that route to edge. Uses `compressionLevel: 6, effort: 1` for a sweet spot between size and CPU. Module-scope cache holds the resized brand mark so sharp only resizes once per Lambda lifetime.
+- **Service worker auto-registers** because `src/service-worker.ts` exists. Caches only 200 responses (no sticky 5xx), runtime cache capped at 32 entries FIFO, navigation fallback queries all caches via `caches.match('/')`. Use `pnpm preview` (not `pnpm dev`) to test SW behaviour locally.
 - **Octopus Agile product code** is hard-coded as `AGILE-24-10-01` in `src/lib/server/octopus.ts`. Octopus rolls these forward; if rates start coming back stale, fetch `/v1/products/?brand=OCTOPUS_ENERGY&is_variable=true` to find the current code.
-- **Sharp powers `/og.png`** (server-rendered 1200×630). It needs the Node.js runtime; do not move that route to edge.
-- **Service worker auto-registers** because `src/service-worker.ts` exists. Use `pnpm preview` (not `pnpm dev`) to test SW behaviour locally.
-- **Location landing pages** at `/region/[slug]` are driven by `src/lib/locations.ts` (44 entries: 14 DNO regions + 30 cities). Adding/removing locations auto-updates `/sitemap.xml`. `pnpm test` includes a slug-uniqueness + DNO-coverage check in `locations.test.ts`.
-- **SEO meta** (title, description, canonical, JSON-LD) is per-page via `<svelte:head>`. The static `<meta name="description">` was deliberately removed from `app.html` — pages must each set their own. Use `src/lib/seo.ts` helpers (`describeAnswer`, `faqJsonLd`, `websiteJsonLd`, `placeJsonLd`).
-- **Post-deploy SEO checklist** (one-time, can't do from code):
-  1. Submit `https://ispowercheap.co.uk/sitemap.xml` to Google Search Console.
-  2. Submit the same to Bing Webmaster Tools.
-  3. Verify domain ownership via DNS TXT or the Vercel-served `/.well-known` route.
-  4. Watch the "Coverage" report for the 47 URLs to be indexed (typical: 1–3 weeks).
+- **Skeleton loading pattern** in `AgileOverlay.svelte` — `.skeleton` blocks use `var(--surface-soft)` (token tints to currentColor automatically), 1.6 s opacity pulse (1.0 → 0.5 → 1.0), `aria-busy`, `.visually-hidden` text for screen readers. Reuse this shape for any future async loading state.
+- **Install affordance** (`InstallPrompt.svelte`) gates on `localStorage` visit count ≥ 2, deduped per session via `sessionStorage` so reloads don't inflate the count. iOS shows a `share → add to home screen` hint instead (no `beforeinstallprompt` on iOS Safari).
+
+### Post-deploy SEO checklist
+
+(One-time, can't do from code:)
+
+1. Submit `https://ispowercheap.co.uk/sitemap.xml` to Google Search Console.
+2. Submit the same to Bing Webmaster Tools.
+3. Verify domain ownership via DNS TXT or the Vercel-served `/.well-known` route.
+4. Watch the Coverage report for the 47 URLs to be indexed (typical: 1–3 weeks).
+5. Add a Vercel WAF rate-limit rule: 60 req/min/IP across `/`, `/api/*`, `/og.png`.
 
 ---
 
