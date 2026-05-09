@@ -31,6 +31,7 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 - **State words live at `src/lib/state.ts`** — `YES`, `SORT OF`, `NO`, `UNKNOWN`. Adding a new word requires re-running `pnpm subset` so the headline font covers the new glyphs.
 - **State derivation is the API's `index` field**, not a locally-computed band. `very low`/`low → YES`, `moderate → SORT OF`, `high`/`very high → NO`. The API's national distribution is more authoritative than anything we'd compute.
 - **Region resolution priority** in `src/lib/server/region.ts`: URL `?postcode=` → Vercel `x-vercel-ip-postal-code` (when country is GB) → national fallback. Returns `{ region, source: 'url' | 'header' | 'national' }`; the route handler uses `source` to pick `cacheHeadersFor()`.
+- **DNO derivation:** `RegionInfo.dnoCode` (Octopus DNO letter A–P, no I) is auto-populated for regional responses by mapping the Carbon Intensity API's `regionid` (1–17) to the matching DNO via `dnoFromRegionId()` in `src/lib/agile.ts`. This lets `AgileOverlay` enable in a single click for users on a known region — no second region picker needed. National responses leave `dnoCode` undefined; the overlay falls back to its own dropdown.
 - **`?state=yes|sortof|no|unknown` is a debug-only override** in `+page.server.ts`. The `/api/now` JSON endpoint deliberately ignores it. Cache TTL is computed from the *real* state (pre-override), not the rendered state.
 
 ### Cache + abuse defence

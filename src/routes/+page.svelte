@@ -142,7 +142,7 @@
 		<Outlook forecast={answer.forecast} />
 		<Timestamps current={answer.current} {isStale} />
 		<div class="agile-wrap">
-			<AgileOverlay />
+			<AgileOverlay dnoCode={answer.region.dnoCode} />
 		</div>
 		<div class="region-wrap">
 			<RegionPicker region={answer.region} />

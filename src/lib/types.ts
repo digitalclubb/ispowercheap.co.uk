@@ -22,6 +22,12 @@ export interface RegionInfo {
 	label: string;
 	postcode?: string;
 	gspId?: number;
+	/**
+	 * Octopus DNO code (A–P, no I) when known. Derived from the Carbon
+	 * Intensity API's regionid on regional responses; absent for national.
+	 * AgileOverlay uses this to skip the second region picker.
+	 */
+	dnoCode?: string;
 }
 
 export interface NowAnswer {

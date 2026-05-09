@@ -1,3 +1,4 @@
+import { dnoFromRegionId } from '../agile.js';
 import { deriveState } from '../state.js';
 import type { CarbonIntensityPoint, NowAnswer, RegionInfo, StateKey } from '../types.js';
 import { fetchCurrentIntensity, fetchForecast, fetchRegionalIntensity } from './carbonIntensity.js';
@@ -111,6 +112,7 @@ export async function buildStateOnly(ctx: AnswerContext): Promise<StateOnlyResul
 			resolvedRegion = {
 				...region,
 				label: regional.shortname ? `${regional.shortname} (${region.postcode})` : region.postcode,
+				dnoCode: dnoFromRegionId(regional.regionid),
 			};
 		} else {
 			current = await fetchCurrentIntensity(ctx.fetch);
@@ -160,6 +162,7 @@ export async function buildAnswer(ctx: AnswerContext): Promise<AnswerResult> {
 			resolvedRegion = {
 				...region,
 				label: regional.shortname ? `${regional.shortname} (${region.postcode})` : region.postcode,
+				dnoCode: dnoFromRegionId(regional.regionid),
 			};
 		} else {
 			// Regional fetch failed → silently fall back to national. The user

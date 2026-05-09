@@ -6,33 +6,44 @@
 		region: string;
 	}
 
+	/**
+	 * DNO code derived from the page's region (Carbon Intensity regionid →
+	 * DNO map). Carries the user's location automatically — no second
+	 * region picker. Absent when the page is on the national fallback (no
+	 * postcode resolved); in that case the toggle is disabled with a hint
+	 * pointing the user back to the main "change" region picker.
+	 */
+	let { dnoCode }: { dnoCode?: string } = $props();
+
 	const STORAGE_KEY = 'ispc:agile';
 
 	let config = $state<Config | null>(null);
-	let panelOpen = $state(false);
-	let draftEnabled = $state(false);
-	let draftRegion = $state('C');
 	let snapshot = $state<AgileSnapshot | null>(null);
 	let loading = $state(false);
 	let error = $state('');
 
 	$effect(() => {
-		// Hydrate config once on mount (client-only; localStorage doesn't exist on the server).
+		// Hydrate config once on mount (client-only).
 		try {
 			const raw = localStorage.getItem(STORAGE_KEY);
 			if (raw) {
 				const parsed = JSON.parse(raw) as Config;
 				if (parsed?.enabled && typeof parsed.region === 'string') {
 					config = parsed;
-					draftEnabled = parsed.enabled;
-					draftRegion = parsed.region;
 					void fetchPrice(parsed.region);
 				}
 			}
 		} catch {
-			// stored value was malformed; ignore
+			// stored value malformed; ignore
 		}
 	});
+
+	// Note: we deliberately do NOT auto-track `dnoCode` after enable. An
+	// Octopus Agile customer's meter is in one fixed DNO; if they enabled
+	// in London then navigate to /region/manchester to browse, they should
+	// keep seeing London's prices (their meter, their price). To change the
+	// saved Agile region, the user disables here, sets the correct region
+	// via the main RegionPicker, then re-enables.
 
 	async function fetchPrice(region: string) {
 		loading = true;
@@ -50,24 +61,26 @@
 		}
 	}
 
-	function openPanel() {
-		draftEnabled = config?.enabled ?? false;
-		draftRegion = config?.region ?? 'C';
-		panelOpen = true;
-	}
-
-	function applyConfig(event: SubmitEvent) {
-		event.preventDefault();
-		if (draftEnabled) {
-			config = { enabled: true, region: draftRegion };
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-			void fetchPrice(draftRegion);
-		} else {
+	function toggleEnabled() {
+		if (config?.enabled) {
 			config = null;
 			snapshot = null;
-			localStorage.removeItem(STORAGE_KEY);
+			error = '';
+			try {
+				localStorage.removeItem(STORAGE_KEY);
+			} catch {
+				// ignore
+			}
+			return;
 		}
-		panelOpen = false;
+		if (!dnoCode) return; // disabled state — no-op
+		config = { enabled: true, region: dnoCode };
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+		} catch {
+			// private mode — settings won't persist
+		}
+		void fetchPrice(dnoCode);
 	}
 
 	function regionName(code: string): string {
@@ -91,31 +104,21 @@
 	<p class="price error">{error}</p>
 {/if}
 
-<div class="agile-toggle">
-	<button type="button" class="link" aria-expanded={panelOpen} onclick={openPanel}>
-		{config?.enabled ? 'Agile settings' : "I'm on Octopus Agile"}
-	</button>
-	{#if panelOpen}
-		<form class="panel" onsubmit={applyConfig}>
-			<label class="row">
-				<input type="checkbox" bind:checked={draftEnabled} />
-				<span>show my Agile price</span>
-			</label>
-			<label class="row">
-				<span>region</span>
-				<select bind:value={draftRegion} disabled={!draftEnabled}>
-					{#each DNO_REGIONS as r (r.code)}
-						<option value={r.code}>{r.name}</option>
-					{/each}
-				</select>
-			</label>
-			<div class="row actions">
-				<button type="submit">save</button>
-				<button type="button" onclick={() => (panelOpen = false)}>cancel</button>
-			</div>
-		</form>
+<button
+	type="button"
+	class="link"
+	onclick={toggleEnabled}
+	disabled={!config?.enabled && !dnoCode}
+	aria-pressed={config?.enabled ?? false}
+>
+	{#if config?.enabled}
+		stop showing Agile price
+	{:else if dnoCode}
+		I'm on Octopus Agile
+	{:else}
+		set your region to enable Agile
 	{/if}
-</div>
+</button>
 
 <style>
 	.price {
@@ -181,15 +184,9 @@
 		white-space: nowrap;
 		border: 0;
 	}
-	.agile-toggle {
-		display: inline-flex;
-		flex-direction: column;
-		align-items: center;
-		gap: var(--space-2);
-		font-size: var(--micro-size);
-		opacity: 0.85;
-	}
+
 	.link {
+		font-size: var(--micro-size);
 		text-decoration: underline;
 		text-underline-offset: 0.25em;
 		opacity: 0.7;
@@ -202,39 +199,9 @@
 	.link:focus-visible {
 		opacity: 1;
 	}
-	.panel {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		padding: var(--space-3);
-		border: 1px solid currentColor;
-		border-radius: 6px;
-		min-width: min(260px, 100%);
-		background: var(--surface-faint);
-	}
-	.row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: var(--space-2);
-	}
-	.row select {
-		flex: 1;
-		min-height: var(--touch-target);
-		padding-inline: var(--space-2);
-		border: 1px solid currentColor;
-		border-radius: 4px;
-		background: transparent;
-		color: inherit;
-		font: inherit;
-	}
-	.row.actions {
-		justify-content: flex-end;
-	}
-	.row.actions button {
-		min-height: var(--touch-target);
-		padding-inline: var(--space-3);
-		border: 1px solid currentColor;
-		border-radius: 4px;
+	.link:disabled {
+		cursor: default;
+		opacity: 0.4;
+		text-decoration: none;
 	}
 </style>
