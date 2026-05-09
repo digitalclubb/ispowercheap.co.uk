@@ -3,6 +3,7 @@
 	import ActionChips from '$lib/components/ActionChips.svelte';
 	import AgileOverlay from '$lib/components/AgileOverlay.svelte';
 	import Footer from '$lib/components/Footer.svelte';
+	import Outlook from '$lib/components/Outlook.svelte';
 	import RegionPicker from '$lib/components/RegionPicker.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
@@ -138,6 +139,7 @@
 				{answer.current.forecast}&thinsp;gCO₂/kWh
 			</p>
 		{/if}
+		<Outlook forecast={answer.forecast} />
 		<Timestamps current={answer.current} {isStale} />
 		<div class="agile-wrap">
 			<AgileOverlay />

@@ -46,6 +46,7 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 - **Polling persists across cache-key boundaries**: when navigating between regions, `polledAnswer` is reset (`$effect` watches `data.answer.region.label`) so stale polled data doesn't bleed across URLs.
 - **Silent geolocation refinement** via `src/lib/silentGeo.ts` `refineRegionSilently(currentPostcode)`. Best practice — **no auto-prompt on page load**. Only acts when `navigator.permissions.query({ name: 'geolocation' })` returns `state: 'granted'`, i.e. for returning visitors. Only on the home page when there's no explicit `?postcode=` (we never override a deliberate user choice).
 - **`Timestamps.svelte`** shows `as of HH:mm · loaded HH:mm`. The "loaded" time is set in a `$effect` that runs once on hydration and intentionally has no reactive deps — it stays at original page-load time, doesn't update with each poll. Polling updates `current.from` (the "as of" time).
+- **`Outlook.svelte`** shows `cheapest HH:mm · peak HH:mm` for upcoming forecast extremes. Computed by `findUpcomingExtremes(forecast, Date.now())` in `src/lib/forecast.ts` — strictly future periods only. Hides when forecast is empty (UNKNOWN) or flat. Most useful in SORT OF state where it answers "should I wait?".
 
 ### SEO
 
@@ -62,6 +63,7 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 - **Octopus Agile product code** is hard-coded as `AGILE-24-10-01` in `src/lib/server/octopus.ts`. Octopus rolls these forward; if rates start coming back stale, fetch `/v1/products/?brand=OCTOPUS_ENERGY&is_variable=true` to find the current code.
 - **Skeleton loading pattern** in `AgileOverlay.svelte` — `.skeleton` blocks use `var(--surface-soft)` (token tints to currentColor automatically), 1.6 s opacity pulse (1.0 → 0.5 → 1.0), `aria-busy`, `.visually-hidden` text for screen readers. Reuse this shape for any future async loading state.
 - **Install affordance** (`InstallPrompt.svelte`) gates on `localStorage` visit count ≥ 2, deduped per session via `sessionStorage` so reloads don't inflate the count. iOS shows a `share → add to home screen` hint instead (no `beforeinstallprompt` on iOS Safari).
+- **Vercel Web Analytics** is enabled via `injectAnalytics()` in `+layout.svelte`. Anonymous, no cookies, no PII, GDPR-compliant — that's why we get away without a consent banner. Beacons go to same-origin `/_vercel/insights/*` (Vercel proxies them) so the existing `connect-src 'self'` CSP covers it. Only active on Vercel deployments; no-op locally. View metrics in the Vercel dashboard's Analytics tab.
 
 ### Post-deploy SEO checklist
 

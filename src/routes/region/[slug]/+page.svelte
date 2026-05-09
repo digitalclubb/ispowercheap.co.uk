@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ActionChips from '$lib/components/ActionChips.svelte';
 	import Footer from '$lib/components/Footer.svelte';
+	import Outlook from '$lib/components/Outlook.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
 	import Timestamps from '$lib/components/Timestamps.svelte';
@@ -90,6 +91,7 @@
 				{answer.current.forecast}&thinsp;gCO₂/kWh
 			</p>
 		{/if}
+		<Outlook forecast={answer.forecast} />
 		<Timestamps current={answer.current} {isStale} />
 		<p class="region-pill">
 			{location.name} · DNO {location.dnoCode} · {location.dnoName}
