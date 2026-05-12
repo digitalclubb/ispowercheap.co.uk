@@ -64,12 +64,15 @@ sw.addEventListener('fetch', (event) => {
 		return;
 	}
 
-	// Page navigations and JSON APIs — stale-while-revalidate so users get
-	// instant render from cache and the latest answer arrives in the background.
+	// Page navigations and the JSON API are the *answer* — they must reflect
+	// the live state whenever we're online. Network-first: the runtime cache is
+	// only the offline last-known-answer fallback, never served ahead of a
+	// reachable origin. (A stale-while-revalidate cache here meant every page
+	// open showed the previous visit's answer until the user reloaded.)
 	const isNavigation = event.request.mode === 'navigate' || url.pathname === '/';
 	const isApi = url.pathname.startsWith('/api/');
 	if (isNavigation || isApi) {
-		event.respondWith(staleWhileRevalidate(event.request, RUNTIME_CACHE));
+		event.respondWith(networkFirst(event.request, RUNTIME_CACHE, isNavigation));
 		return;
 	}
 });
@@ -99,37 +102,39 @@ async function trimCache(cacheName: string, max: number): Promise<void> {
 	}
 }
 
-async function staleWhileRevalidate(req: Request, cacheName: string): Promise<Response> {
+async function networkFirst(
+	req: Request,
+	cacheName: string,
+	isNavigation: boolean,
+): Promise<Response> {
 	const cache = await caches.open(cacheName);
-	const cached = await cache.match(req);
-	// Only cache 200s for navigations; a 503 cached for SWR turns into a sticky
-	// outage that survives the actual outage. The same applies to /api/now.
-	const network = fetch(req)
-		.then(async (res) => {
-			if (res.ok && res.status === 200) {
-				await cache.put(req, res.clone());
-				await trimCache(cacheName, RUNTIME_CACHE_MAX);
-			}
+
+	// Offline fallback: the cached copy of this exact request, or — for a
+	// navigation — the cached home page so the user still sees the most-recent
+	// known answer instead of a browser error page. The home page is only ever
+	// in RUNTIME_CACHE (it's SSR'd, never precached); `caches.match('/')`
+	// queries every cache, so it finds it there once the user has visited once.
+	const fromCache = async (): Promise<Response | undefined> =>
+		(await cache.match(req)) ?? (isNavigation ? await caches.match('/') : undefined);
+
+	try {
+		const res = await fetch(req);
+		// Navigation requests carry `redirect: 'manual'`, so a 3xx from the
+		// origin (e.g. the canonicalising 308 in hooks.server.ts) surfaces here
+		// as an opaque redirect. Hand it straight back so the browser performs
+		// the redirect — falling through to the cached `/` would render the
+		// page but swallow the URL correction.
+		if (res.type === 'opaqueredirect') return res;
+		if (res.ok && res.status === 200) {
+			await cache.put(req, res.clone());
+			await trimCache(cacheName, RUNTIME_CACHE_MAX);
 			return res;
-		})
-		.catch(() => null);
-
-	if (cached) {
-		// Trigger background refresh; immediately return the cached value.
-		network.catch(() => undefined);
-		return cached;
+		}
+		// Upstream returned an error (5xx, etc.) — a recent cached answer beats
+		// an error page. We never cache the error itself, so it can't go sticky.
+		return (await fromCache()) ?? res;
+	} catch {
+		// Network unreachable — serve the last-known answer if we have one.
+		return (await fromCache()) ?? new Response('Service Unavailable', { status: 503 });
 	}
-	const res = await network;
-	if (res?.ok) return res;
-
-	// Last-resort offline fallback: serve the cached home page so the user
-	// still gets the most-recent known answer instead of a browser error page.
-	// The home page may live in either RUNTIME_CACHE (visited before) or
-	// APP_CACHE (precached at install) — `caches.match()` queries all caches.
-	if (req.mode === 'navigate') {
-		const fallback = await caches.match('/');
-		if (fallback) return fallback;
-	}
-
-	return res ?? new Response('Service Unavailable', { status: 503 });
 }
