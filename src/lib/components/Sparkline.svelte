@@ -85,12 +85,12 @@
 			<figcaption>
 				<span>
 					cheapest <strong>{formatTimeWithDay(extremes.cheapest.from, now)}</strong>
-					· {extremes.cheapest.forecast}&thinsp;g
+					· {extremes.cheapest.forecast}&#8239;g
 				</span>
 				<span class="sep" aria-hidden="true">·</span>
 				<span>
 					peak <strong>{formatTimeWithDay(extremes.peak.from, now)}</strong>
-					· {extremes.peak.forecast}&thinsp;g
+					· {extremes.peak.forecast}&#8239;g
 				</span>
 			</figcaption>
 		{/if}

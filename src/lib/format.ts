@@ -17,11 +17,13 @@ export function formatTime(iso: string): string {
 }
 
 /**
- * Like `formatTime`, but appends " tomorrow" when `iso` falls on a later
- * calendar day than `referenceIso` (both compared in the viewer's local
- * timezone). Forecast times can land just past midnight, where a bare
- * `09:00` reads as nine hours ago; the forecast window never reaches beyond
- * tomorrow, so a single "tomorrow" suffix covers it. Falls back to bare
+ * Like `formatTime`, but appends a non-breaking space + "tomorrow" when `iso`
+ * falls on a different (always later, for the forecast times this is used on)
+ * calendar day than `referenceIso` — both compared in the viewer's local
+ * timezone. Forecast times can land just past midnight, where a bare `09:00`
+ * reads as nine hours ago; the forecast window never reaches beyond tomorrow,
+ * so a single "tomorrow" suffix covers it. The space is non-breaking so the
+ * time and "tomorrow" never wrap onto separate lines. Falls back to bare
  * `HH:mm` on any parse failure, same as `formatTime`.
  */
 export function formatTimeWithDay(iso: string, referenceIso: string): string {
@@ -35,7 +37,7 @@ export function formatTimeWithDay(iso: string, referenceIso: string): string {
 			d.getFullYear() === ref.getFullYear() &&
 			d.getMonth() === ref.getMonth() &&
 			d.getDate() === ref.getDate();
-		return sameDay ? time : `${time} tomorrow`;
+		return sameDay ? time : `${time} tomorrow`;
 	} catch {
 		return time;
 	}

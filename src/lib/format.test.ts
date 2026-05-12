@@ -12,11 +12,11 @@ describe('formatTimeWithDay', () => {
 		expect(out).not.toMatch(/tomorrow/);
 	});
 
-	it('appends "tomorrow" for a time on a later calendar day', () => {
+	it('appends a non-breaking-space "tomorrow" for a time on a later calendar day', () => {
 		const ref = new Date(2026, 4, 9, 22, 0, 0); // local 9 May, 22:00
 		const nextDay = new Date(2026, 4, 10, 9, 0, 0); // local 10 May, 09:00
 		const out = formatTimeWithDay(nextDay.toISOString(), ref.toISOString());
-		expect(out).toMatch(/^\d{2}:\d{2} tomorrow$/);
+		expect(out).toMatch(/^\d{2}:\d{2} tomorrow$/); // U+00A0, not a plain space — keeps it on one line
 	});
 
 	it('falls back to a bare HH:mm when the reference is unparseable', () => {

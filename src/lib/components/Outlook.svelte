@@ -15,11 +15,11 @@
 	<p class="outlook">
 		cheapest
 		<time datetime={extremes.cheapest.from}>{formatTimeWithDay(extremes.cheapest.from, now)}</time>
-		<span class="value">({extremes.cheapest.forecast}&thinsp;g)</span>
+		<span class="value">({extremes.cheapest.forecast}&#8239;g)</span>
 		<span class="sep" aria-hidden="true">·</span>
 		peak
 		<time datetime={extremes.peak.from}>{formatTimeWithDay(extremes.peak.from, now)}</time>
-		<span class="value">({extremes.peak.forecast}&thinsp;g)</span>
+		<span class="value">({extremes.peak.forecast}&#8239;g)</span>
 	</p>
 {/if}
 
