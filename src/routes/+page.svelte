@@ -8,6 +8,7 @@
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
 	import Timestamps from '$lib/components/Timestamps.svelte';
+	import { upcomingExtremes } from '$lib/forecast.js';
 	import { startPolling } from '$lib/livePolling.js';
 	import { describeAnswer, faqJsonLd, ORIGIN, websiteJsonLd } from '$lib/seo.js';
 	import { refineRegionSilently } from '$lib/silentGeo.js';
@@ -40,6 +41,15 @@
 		const ageMs = Date.now() - new Date(answer.current.from).getTime();
 		return ageMs > 45 * 60 * 1000;
 	});
+
+	// Cheapest / peak in the next 24 hours, computed once and handed to both
+	// Outlook and Sparkline so the headline readout, the chart caption and its
+	// ↓/↑ markers all agree. Future-only: the half-hour already underway never
+	// wins — you can't "wait for" it. Anchored to `fetchedAt` rather than
+	// Date.now() so the server render and the client hydrate agree (no flicker
+	// at a settlement-period boundary); it advances each time polling ships
+	// fresh data.
+	const upcoming = $derived(upcomingExtremes(answer.forecast, Date.parse(answer.fetchedAt)));
 
 	// Live polling: refresh /api/now every 5 minutes while the tab is visible.
 	// State changes cross-fade automatically via the `main` element's CSS
@@ -139,7 +149,7 @@
 				{answer.current.forecast}&thinsp;gCO₂/kWh
 			</p>
 		{/if}
-		<Outlook forecast={answer.forecast} />
+		<Outlook extremes={upcoming} now={answer.fetchedAt} />
 		<Timestamps current={answer.current} {isStale} />
 		<div class="agile-wrap">
 			<AgileOverlay dnoCode={answer.region.dnoCode} />
@@ -152,7 +162,7 @@
 	{#if answer.forecast.length}
 		<section class="forecast" aria-labelledby="forecast-heading">
 			<h2 id="forecast-heading" class="section-heading">next 24 hours</h2>
-			<Sparkline points={answer.forecast} />
+			<Sparkline points={answer.forecast} extremes={upcoming} now={answer.fetchedAt} />
 		</section>
 
 		<section class="chips" aria-labelledby="chips-heading">

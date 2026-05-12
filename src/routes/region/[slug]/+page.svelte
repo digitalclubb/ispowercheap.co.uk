@@ -5,6 +5,7 @@
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
 	import Timestamps from '$lib/components/Timestamps.svelte';
+	import { upcomingExtremes } from '$lib/forecast.js';
 	import { startPolling } from '$lib/livePolling.js';
 	import { siblingLocations } from '$lib/locations.js';
 	import { describeAnswer, faqJsonLd, locationJsonLd, ORIGIN } from '$lib/seo.js';
@@ -48,6 +49,13 @@
 		const ageMs = Date.now() - new Date(answer.current.from).getTime();
 		return ageMs > 45 * 60 * 1000;
 	});
+
+	// Cheapest / peak in the next 24 hours, computed once and handed to both
+	// Outlook and Sparkline so the headline readout, the chart caption and its
+	// ↓/↑ markers all agree. Future-only: the half-hour already underway never
+	// wins. Anchored to `fetchedAt` rather than Date.now() so the server render
+	// and the client hydrate agree; it advances each time polling ships fresh data.
+	const upcoming = $derived(upcomingExtremes(answer.forecast, Date.parse(answer.fetchedAt)));
 </script>
 
 <svelte:head>
@@ -91,7 +99,7 @@
 				{answer.current.forecast}&thinsp;gCO₂/kWh
 			</p>
 		{/if}
-		<Outlook forecast={answer.forecast} />
+		<Outlook extremes={upcoming} now={answer.fetchedAt} />
 		<Timestamps current={answer.current} {isStale} />
 		<p class="region-pill">
 			{location.name} · DNO {location.dnoCode} · {location.dnoName}
@@ -101,7 +109,7 @@
 	{#if answer.forecast.length}
 		<section class="forecast" aria-labelledby="forecast-heading">
 			<h2 id="forecast-heading" class="section-heading">next 24 hours</h2>
-			<Sparkline points={answer.forecast} />
+			<Sparkline points={answer.forecast} extremes={upcoming} now={answer.fetchedAt} />
 		</section>
 
 		<section class="chips" aria-labelledby="chips-heading">

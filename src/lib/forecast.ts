@@ -36,3 +36,24 @@ export function findUpcomingExtremes(
 	if (!cheapest || !peak || cheapest === peak) return null;
 	return { cheapest, peak };
 }
+
+/**
+ * Number of half-hour settlement periods the home and region pages render as
+ * the "next 24 hours" forecast chart. Defined here so the page-level
+ * `upcomingExtremes` call and the chart's own slicing can never drift apart —
+ * if they did, the caption could name a period that isn't on the chart.
+ */
+export const FORECAST_WINDOW_PERIODS = 48;
+
+/**
+ * `findUpcomingExtremes` over just the next 24 hours — the window the forecast
+ * chart draws. Call this from the routes and hand the result to both Outlook
+ * and the chart, so the headline outlook line, the chart caption and its ↓/↑
+ * markers are all computed from exactly the same set of periods.
+ */
+export function upcomingExtremes(
+	forecast: ReadonlyArray<CarbonIntensityPoint>,
+	nowMs: number = Date.now(),
+): ForecastExtremes | null {
+	return findUpcomingExtremes(forecast.slice(0, FORECAST_WINDOW_PERIODS), nowMs);
+}

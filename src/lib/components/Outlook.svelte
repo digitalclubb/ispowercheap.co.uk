@@ -1,23 +1,24 @@
 <script lang="ts">
-	import { formatTime } from '$lib/format.js';
-	import { findUpcomingExtremes } from '$lib/forecast.js';
-	import type { CarbonIntensityPoint } from '$lib/types.js';
+	import type { ForecastExtremes } from '$lib/forecast.js';
+	import { formatTimeWithDay } from '$lib/format.js';
 
-	let { forecast }: { forecast: ReadonlyArray<CarbonIntensityPoint> } = $props();
-
-	// Recomputes whenever `forecast` changes (i.e. when polling ships fresh data),
-	// reading `Date.now()` each time so "upcoming" stays accurate as the day moves.
-	const extremes = $derived(findUpcomingExtremes(forecast, Date.now()));
+	// `extremes`: cheapest / peak among the upcoming periods — computed by the
+	// page (over the next 24 h, future-only) and shared with the forecast chart,
+	// so the chart's ↓/↑ markers, its caption and this line can never disagree.
+	// Null when there's no useful contrast (flat forecast, or no upstream data).
+	// `now`: the moment the forecast was fetched (`answer.fetchedAt`) — used only
+	// to decide whether a time needs a "tomorrow" tag.
+	let { extremes, now }: { extremes: ForecastExtremes | null; now: string } = $props();
 </script>
 
 {#if extremes}
 	<p class="outlook">
 		cheapest
-		<time datetime={extremes.cheapest.from}>{formatTime(extremes.cheapest.from)}</time>
+		<time datetime={extremes.cheapest.from}>{formatTimeWithDay(extremes.cheapest.from, now)}</time>
 		<span class="value">({extremes.cheapest.forecast}&thinsp;g)</span>
 		<span class="sep" aria-hidden="true">·</span>
 		peak
-		<time datetime={extremes.peak.from}>{formatTime(extremes.peak.from)}</time>
+		<time datetime={extremes.peak.from}>{formatTimeWithDay(extremes.peak.from, now)}</time>
 		<span class="value">({extremes.peak.forecast}&thinsp;g)</span>
 	</p>
 {/if}

@@ -15,3 +15,28 @@ export function formatTime(iso: string): string {
 		return '';
 	}
 }
+
+/**
+ * Like `formatTime`, but appends " tomorrow" when `iso` falls on a later
+ * calendar day than `referenceIso` (both compared in the viewer's local
+ * timezone). Forecast times can land just past midnight, where a bare
+ * `09:00` reads as nine hours ago; the forecast window never reaches beyond
+ * tomorrow, so a single "tomorrow" suffix covers it. Falls back to bare
+ * `HH:mm` on any parse failure, same as `formatTime`.
+ */
+export function formatTimeWithDay(iso: string, referenceIso: string): string {
+	const time = formatTime(iso);
+	if (!time) return time;
+	try {
+		const d = new Date(iso);
+		const ref = new Date(referenceIso);
+		if (Number.isNaN(d.getTime()) || Number.isNaN(ref.getTime())) return time;
+		const sameDay =
+			d.getFullYear() === ref.getFullYear() &&
+			d.getMonth() === ref.getMonth() &&
+			d.getDate() === ref.getDate();
+		return sameDay ? time : `${time} tomorrow`;
+	} catch {
+		return time;
+	}
+}
