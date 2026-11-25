@@ -126,8 +126,7 @@ GET <a href="/api/now?postcode=SW1A">https://ispowercheap.co.uk/api/now?postcode
 				and the hosting myself. If this has helped, you can
 				<a href="https://ko-fi.com/digitalclubb" target="_blank" rel="noopener noreferrer"
 					>buy me a coffee<span class="visually-hidden"> (opens in a new tab)</span></a
-				>
-				— it goes towards the running costs. If money's tight, please don't: the
+				>. It goes towards the running costs. If money's tight, please don't: the
 				site stays free either way.
 			</p>
 			<p class="byline">
