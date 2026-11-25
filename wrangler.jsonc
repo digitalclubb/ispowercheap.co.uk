@@ -9,9 +9,7 @@
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
-	"routes": [
-		{ "pattern": "ispowercheap.co.uk", "custom_domain": true },
-		{ "pattern": "www.ispowercheap.co.uk", "custom_domain": true }
-	],
+	// www -> apex is a Cloudflare Redirect Rule on the zone, not a Worker route.
+	"routes": [{ "pattern": "ispowercheap.co.uk", "custom_domain": true }],
 	"observability": { "enabled": true }
 }

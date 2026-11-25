@@ -89,11 +89,6 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export const handle: Handle = async ({ event, resolve }) => {
-	if (event.url.hostname.startsWith('www.')) {
-		const apex = new URL(event.url);
-		apex.hostname = apex.hostname.slice(4);
-		throw redirect(308, apex.toString());
-	}
 	const cleaned = canonicalise(event.url);
 	if (cleaned) throw redirect(308, cleaned.pathname + cleaned.search);
 

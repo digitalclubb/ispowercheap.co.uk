@@ -99,7 +99,7 @@ Returning visitors with a previously-granted geolocation permission get a silent
 
 ## Deployment
 
-`pnpm deploy` (after `pnpm exec wrangler login`), or connect the GitHub repo in Cloudflare dashboard → Workers → Workers Builds with build command `pnpm build` and deploy command `pnpm exec wrangler deploy`. Custom domains are declared in `wrangler.jsonc`; `www` 308s to the apex in `hooks.server.ts`.
+`pnpm deploy` (after `pnpm exec wrangler login`), or connect the GitHub repo in Cloudflare dashboard → Workers → Workers Builds with build command `pnpm build` and deploy command `pnpm exec wrangler deploy`. Custom domains are declared in `wrangler.jsonc`; `www` 308s to the apex via a Cloudflare Redirect Rule on the zone (not in code).
 
 **Recommended Cloudflare WAF rate-limiting rule:** 60 req/min/IP across `/`, `/api/*`, `/og.png`. In-memory rate limiting on serverless is unreliable across cold-starts; the WAF dashboard is the right place.
 
