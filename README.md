@@ -8,7 +8,7 @@ The page renders one of four states — **YES** / **SORT OF** / **NO** / **UNKNO
 
 ## Stack
 
-- **pnpm** + **SvelteKit 2** + **Svelte 5** + **Vercel** (Node.js 22 runtime, not edge — sharp dependency for OG image)
+- **pnpm** + **SvelteKit 2** + **Svelte 5** + **Cloudflare Workers** (`@sveltejs/adapter-cloudflare`, config in `wrangler.jsonc`)
 - **TypeScript strict**, **Biome** lint/format, **Vitest** tests
 - **Vanilla CSS** with custom properties — no Tailwind, no SCSS, no CSS-in-JS
 - **Inter** weight 900 subsetted to ~12 glyphs (~1.7 KB), self-hosted
@@ -22,7 +22,9 @@ pnpm install
 pnpm dev          # http://localhost:5173+ (auto-detects free port)
 pnpm test         # 27 vitest cases
 pnpm check        # svelte-check + tsc
-pnpm build        # vercel-ready output
+pnpm build        # Workers-ready output in .svelte-kit/cloudflare
+pnpm deploy       # build + wrangler deploy
+pnpm og           # regen the 4 OG PNGs (needs sharp, runs in Node)
 pnpm icons        # regenerate brand icons (needs src/lib/assets/bolt.png)
 pnpm subset       # regenerate headline font subset
 ```
@@ -59,7 +61,7 @@ The page maps the Carbon Intensity API's `index` field directly: `very low`/`low
 Three-tier priority handled by `src/lib/server/region.ts`:
 
 1. **URL `?postcode=`** — explicit user choice (highest priority)
-2. **Vercel `x-vercel-ip-postal-code`** — IP-derived, no prompt, ~70 % accurate
+2. **Cloudflare `request.cf.postalCode`** — IP-derived, no prompt, ~70 % accurate
 3. **National GB fallback** — when the above are missing/non-UK
 
 Returning visitors with a previously-granted geolocation permission get a silent precision upgrade after hydration via `src/lib/silentGeo.ts`. **No prompt fires for new visitors.**
@@ -68,7 +70,7 @@ Returning visitors with a previously-granted geolocation permission get a silent
 `src/lib/server/answer.ts` exports `cacheHeadersFor(source, state)` which picks the right `Cache-Control` and `Vary`:
 
 - **URL- or national-derived** → `public, s-maxage=60, stale-while-revalidate=300`
-- **IP-header-derived** → `private, max-age=60` (never enters Vercel's shared edge cache)
+- **IP-header-derived** → `private, max-age=60` (never enters a shared cache)
 - **UNKNOWN state** → short TTL (10 s) so transient upstream blips don't pin
 
 `src/hooks.server.ts` 308-redirects unknown query parameters to the canonical URL — defeats cache-buster amplification (`?postcode=SW1A&utm=anything` collapses to a single cache entry).
@@ -97,15 +99,15 @@ Returning visitors with a previously-granted geolocation permission get a silent
 
 ## Deployment
 
-Push to GitHub, connect to Vercel. No `vercel.json` needed — `@sveltejs/adapter-vercel` writes the function bundle correctly.
+`pnpm deploy` (after `pnpm exec wrangler login`), or connect the GitHub repo in Cloudflare dashboard → Workers → Workers Builds with build command `pnpm build` and deploy command `pnpm exec wrangler deploy`. Custom domains are declared in `wrangler.jsonc`; `www` 308s to the apex in `hooks.server.ts`.
 
-**Recommended Vercel WAF rule:** 60 req/min/IP across `/`, `/api/*`, `/og.png`. In-memory rate limiting on serverless is unreliable across cold-starts; the WAF dashboard is the right place.
+**Recommended Cloudflare WAF rate-limiting rule:** 60 req/min/IP across `/`, `/api/*`, `/og.png`. In-memory rate limiting on serverless is unreliable across cold-starts; the WAF dashboard is the right place.
 
 **Post-deploy checklist:**
 
 1. Submit `https://ispowercheap.co.uk/sitemap.xml` to Google Search Console.
 2. Submit the same to Bing Webmaster Tools.
-3. Verify domain ownership (DNS TXT or Vercel-served `/.well-known`).
+3. Verify domain ownership (DNS TXT record in Cloudflare).
 4. Watch the Coverage report for the 47 indexable URLs (typical: 1–3 weeks).
 
 ## Data sources & attribution

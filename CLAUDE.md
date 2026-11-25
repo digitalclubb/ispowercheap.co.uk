@@ -5,7 +5,7 @@ The full v1 spec lives at `spec.md`. This file holds context that should bias ev
 
 ## Tech stack
 
-- **pnpm + SvelteKit + Vercel adapter** (Node.js 22 runtime, no edge — sharp dependency).
+- **pnpm + SvelteKit + Cloudflare Workers** (`@sveltejs/adapter-cloudflare@7` — v8+ needs Kit 3). Config in `wrangler.jsonc`; `nodejs_als` flag is required for `getRequestEvent()`.
 - **TypeScript strict.**
 - **Vanilla CSS with custom properties.** No Tailwind, no SCSS, no CSS-in-JS.
 - **Biome** for lint + format. **Vitest** for unit tests.
@@ -19,7 +19,9 @@ The full v1 spec lives at `spec.md`. This file holds context that should bias ev
 pnpm dev          # dev server (auto-detects free port)
 pnpm test         # vitest run (chip logic, parsePoint, locations)
 pnpm check        # svelte-check + tsc (whole repo)
-pnpm build        # vercel-ready build
+pnpm build        # Workers build (.svelte-kit/cloudflare)
+pnpm deploy       # build + wrangler deploy
+pnpm og           # regen OG PNGs (only if state words/colours/og-mark change)
 pnpm subset       # regen headline font (only if state words change)
 pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 ```
@@ -30,16 +32,16 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 
 - **State words live at `src/lib/state.ts`** — `YES`, `SORT OF`, `NO`, `UNKNOWN`. Adding a new word requires re-running `pnpm subset` so the headline font covers the new glyphs.
 - **State derivation is the API's `index` field**, not a locally-computed band. `very low`/`low → YES`, `moderate → SORT OF`, `high`/`very high → NO`. The API's national distribution is more authoritative than anything we'd compute.
-- **Region resolution priority** in `src/lib/server/region.ts`: URL `?postcode=` → Vercel `x-vercel-ip-postal-code` (when country is GB) → national fallback. Returns `{ region, source: 'url' | 'header' | 'national' }`; the route handler uses `source` to pick `cacheHeadersFor()`.
+- **Region resolution priority** in `src/lib/server/region.ts`: URL `?postcode=` → Cloudflare `platform.cf.postalCode` via `getRequestEvent()` (when country is GB) → national fallback. Returns `{ region, source: 'url' | 'header' | 'national' }`; the route handler uses `source` to pick `cacheHeadersFor()`.
 - **DNO derivation:** `RegionInfo.dnoCode` (Octopus DNO letter A–P, no I) is auto-populated for regional responses by mapping the Carbon Intensity API's `regionid` (1–17) to the matching DNO via `dnoFromRegionId()` in `src/lib/agile.ts`. This lets `AgileOverlay` enable in a single click for users on a known region — no second region picker needed. National responses leave `dnoCode` undefined; the overlay falls back to its own dropdown.
 - **`?state=yes|sortof|no|unknown` is a debug-only override** in `+page.server.ts`. The `/api/now` JSON endpoint deliberately ignores it. Cache TTL is computed from the *real* state (pre-override), not the rendered state.
 
 ### Cache + abuse defence
 
-- **`cacheHeadersFor(source, state)`** in `src/lib/server/answer.ts` is the single source of truth for `Cache-Control` + `Vary`. Header-derived responses get `private, max-age=60` (never enters Vercel's shared edge cache); URL/national-derived get `public, s-maxage=60, swr=300`. UNKNOWN gets short TTLs (10 s).
+- **`cacheHeadersFor(source, state)`** in `src/lib/server/answer.ts` is the single source of truth for `Cache-Control` + `Vary`. Header-derived responses get `private, max-age=60` (never enters a shared cache); URL/national-derived get `public, s-maxage=60, swr=300`. UNKNOWN gets short TTLs (10 s). Note: Worker responses bypass Cloudflare's CDN cache, so every request runs the Worker and hits upstream APIs.
 - **`hooks.server.ts canonicalise()`** 308-redirects unknown query params to the canonical URL. Per-pathname allowlist is `ALLOWED_PARAMS`; dynamic routes use `DYNAMIC_NO_PARAM_PATHS` regexes. **It's fail-open** — pathnames not in the table pass through unchanged. When adding a new route, add it to `ALLOWED_PARAMS`.
 - **Security headers** (CSP, HSTS, Referrer-Policy, X-Content-Type-Options, X-Frame-Options, Permissions-Policy) are set centrally in `hooks.server.ts`. CSP keeps `'unsafe-inline'` for script-src + style-src — required by SvelteKit hydration today.
-- **Rate limiting belongs at Vercel WAF**, not in code. Recommend 60 req/min/IP across `/`, `/api/*`, `/og.png`. In-memory limiters on serverless are unreliable across cold-starts.
+- **Rate limiting belongs at Cloudflare WAF**, not in code. Recommend 60 req/min/IP across `/`, `/api/*`, `/og.png`. In-memory limiters on serverless are unreliable across cold-starts.
 
 ### Live data
 
@@ -58,8 +60,8 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 
 ### PWA + assets
 
-- **Brand mark source: `src/lib/assets/bolt.png`** (transparent background expected). `pnpm icons` reads it and writes 8 PNG sizes to `static/`. `og.png` route also reads it via SvelteKit's `read()` for the OG mark.
-- **Sharp powers `/og.png`** (server-rendered 1200×630). It needs the Node.js runtime; do not move that route to edge. Uses `compressionLevel: 6, effort: 1` for a sweet spot between size and CPU. Module-scope cache holds the resized brand mark so sharp only resizes once per Lambda lifetime.
+- **Brand mark source: `src/lib/assets/bolt.png`** (transparent background expected). `pnpm icons` reads it and writes 8 PNG sizes to `static/`.
+- **`/og.png` serves one of 4 pre-rendered PNGs** (`src/lib/assets/og/{state}.png`, from `og-mark.png`) via `read()`. Sharp can't run on Workers, so `pnpm og` renders them in Node — re-run it if state words, theme colours or the mark change.
 - **Service worker auto-registers** because `src/service-worker.ts` exists. Caches only 200 responses (no sticky 5xx), runtime cache capped at 32 entries FIFO, navigation fallback queries all caches via `caches.match('/')`. Use `pnpm preview` (not `pnpm dev`) to test SW behaviour locally.
 - **Dev-mode SW safety net** in `+layout.svelte`: if a previous `pnpm preview` left a SW registered, it can serve stale HTML referencing production-hashed asset paths during a subsequent `pnpm dev` session — broken layout. The layout `$effect` detects any leftover registration in dev mode, unregisters it, purges all caches, and reloads once. Stripped from production builds via `import.meta.env.DEV`. No-op when no SW is registered (cannot loop).
 - **Production SW upgrade safety net** in `+layout.svelte`: when a new build's SW activates and calls `clients.claim()`, the page may have already rendered against the old build's HTML (referencing asset hashes the new SW's `PRECACHE_SET` doesn't have). The `controllerchange` listener detects the SW transition and reloads once. `alreadyHadController` guard prevents first-load reload-loop.
@@ -67,7 +69,7 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 - **Octopus Agile product code** is hard-coded as `AGILE-24-10-01` in `src/lib/server/octopus.ts`. Octopus rolls these forward; if rates start coming back stale, fetch `/v1/products/?brand=OCTOPUS_ENERGY&is_variable=true` to find the current code.
 - **Skeleton loading pattern** in `AgileOverlay.svelte` — `.skeleton` blocks use `var(--surface-soft)` (token tints to currentColor automatically), 1.6 s opacity pulse (1.0 → 0.5 → 1.0), `aria-busy`, `.visually-hidden` text for screen readers. Reuse this shape for any future async loading state.
 - **Install affordance** (`InstallPrompt.svelte`) gates on `localStorage` visit count ≥ 2, deduped per session via `sessionStorage` so reloads don't inflate the count. iOS shows a `share → add to home screen` hint instead (no `beforeinstallprompt` on iOS Safari).
-- **Vercel Web Analytics** is enabled via `injectAnalytics()` in `+layout.svelte`. Anonymous, no cookies, no PII, GDPR-compliant — that's why we get away without a consent banner. Beacons go to same-origin `/_vercel/insights/*` (Vercel proxies them) so the existing `connect-src 'self'` CSP covers it. Only active on Vercel deployments; no-op locally. View metrics in the Vercel dashboard's Analytics tab.
+- **Cloudflare Web Analytics** is auto-injected by Cloudflare (enable in dashboard → Analytics & Logs → Web Analytics); no code. Anonymous, no cookies — no consent banner. CSP allows `static.cloudflareinsights.com` (script) and `cloudflareinsights.com` (beacon).
 
 ### Post-deploy SEO checklist
 
@@ -77,7 +79,7 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 2. Submit the same to Bing Webmaster Tools.
 3. Verify domain ownership via DNS TXT or the Vercel-served `/.well-known` route.
 4. Watch the Coverage report for the 47 URLs to be indexed (typical: 1–3 weeks).
-5. Add a Vercel WAF rate-limit rule: 60 req/min/IP across `/`, `/api/*`, `/og.png`.
+5. Add a Cloudflare WAF rate-limit rule: 60 req/min/IP across `/`, `/api/*`, `/og.png`.
 
 ---
 

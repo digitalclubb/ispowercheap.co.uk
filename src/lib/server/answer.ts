@@ -7,7 +7,7 @@ import { type RegionSource, resolveRegion } from './region.js';
 /**
  * Pick a Cache-Control value that respects two truths:
  *   - When the body depends on the user's IP (source === 'header'), the
- *     response MUST NOT enter Vercel's shared edge cache or one user's
+ *     response MUST NOT enter a shared cache or one user's
  *     regional answer leaks to another.
  *   - When the upstream returned nothing (state === 'unknown'), we want a
  *     short TTL so recovery is fast — never pin UNKNOWN for 5 minutes.
@@ -23,12 +23,6 @@ export function cacheHeaderFor(source: RegionSource, state: StateKey): string {
 /**
  * Build the full set of cache + vary headers for a route response.
  *
- * `Vary` is set to `x-vercel-ip-postal-code, x-vercel-ip-country` whenever the
- * region was derived from the request IP — belt-and-braces with `private`. If
- * a future change accidentally flips a header-derived response to `public`,
- * a CDN that honours Vary still won't serve one user's regional answer to
- * another user.
- *
  * `extraVary` is for routes that already need to vary on something else
  * (e.g. `/api/now` varies on `Origin` for CORS).
  */
@@ -41,9 +35,6 @@ export function cacheHeadersFor(
 		'Cache-Control': cacheHeaderFor(source, state),
 	};
 	const vary = [...extraVary];
-	if (source === 'header') {
-		vary.push('x-vercel-ip-postal-code', 'x-vercel-ip-country');
-	}
 	if (vary.length) headers.Vary = vary.join(', ');
 	return headers;
 }

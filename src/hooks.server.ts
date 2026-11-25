@@ -64,13 +64,13 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
 			// Inline scripts are SvelteKit's hydration JSON payload + state
 			// initialiser. SvelteKit requires 'unsafe-inline' on script-src
 			// unless we add per-request nonces (out of scope for v1).
-			"script-src 'self' 'unsafe-inline'",
+			"script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
 			// SVG-inline data: URLs are how the dynamic favicon ships.
 			"img-src 'self' data:",
 			"font-src 'self'",
 			// Client-side reverse-geocode hits postcodes.io directly; same-origin
 			// covers /api/now, /api/agile, the SW, and our manifest.
-			"connect-src 'self' https://api.postcodes.io",
+			"connect-src 'self' https://api.postcodes.io https://cloudflareinsights.com",
 			"manifest-src 'self'",
 			"worker-src 'self'",
 			"frame-ancestors 'none'",
@@ -89,6 +89,11 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export const handle: Handle = async ({ event, resolve }) => {
+	if (event.url.hostname.startsWith('www.')) {
+		const apex = new URL(event.url);
+		apex.hostname = apex.hostname.slice(4);
+		throw redirect(308, apex.toString());
+	}
 	const cleaned = canonicalise(event.url);
 	if (cleaned) throw redirect(308, cleaned.pathname + cleaned.search);
 

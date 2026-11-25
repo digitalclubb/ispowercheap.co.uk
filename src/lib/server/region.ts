@@ -1,3 +1,4 @@
+import { getRequestEvent } from '$app/server';
 import { normalizeOutcode } from '../postcode.js';
 import type { RegionInfo } from '../types.js';
 
@@ -17,7 +18,7 @@ export interface RegionResolution {
 /**
  * Resolve the user's region from request signals, in priority order:
  *   1. Explicit ?postcode= in the URL (the user asked for it).
- *   2. Vercel's x-vercel-ip-postal-code header (when country is GB).
+ *   2. Cloudflare's request.cf.postalCode (when country is GB).
  *   3. National GB fallback.
  *
  * Lat/lon → outcode reverse-geocoding happens client-side on user opt-in
@@ -29,7 +30,7 @@ export interface RegionResolution {
  * Header-derived responses must NOT enter shared caches because the same
  * URL produces different bodies depending on the requester's IP.
  */
-export function resolveRegion({ url, request }: RegionContext): RegionResolution {
+export function resolveRegion({ url }: RegionContext): RegionResolution {
 	const urlOutcode = normalizeOutcode(url.searchParams.get('postcode'));
 	if (urlOutcode) {
 		return {
@@ -38,9 +39,9 @@ export function resolveRegion({ url, request }: RegionContext): RegionResolution
 		};
 	}
 
-	const country = request.headers.get('x-vercel-ip-country');
-	if (country === 'GB') {
-		const headerOutcode = normalizeOutcode(request.headers.get('x-vercel-ip-postal-code'));
+	const cf = getRequestEvent().platform?.cf;
+	if (cf?.country === 'GB') {
+		const headerOutcode = normalizeOutcode(cf.postalCode);
 		if (headerOutcode) {
 			return {
 				region: { kind: 'postcode', label: headerOutcode, postcode: headerOutcode },

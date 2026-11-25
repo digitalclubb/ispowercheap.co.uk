@@ -5,7 +5,10 @@ declare global {
 		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+		interface Platform {
+			/** Cloudflare request geo (subset of IncomingRequestCfProperties). */
+			cf?: { country?: string; postalCode?: string };
+		}
 	}
 }
 
