@@ -28,7 +28,7 @@ export const STATE_WORD: Record<StateKey, string> = {
 /** One-line plain-English context immediately under the headline. */
 export const STATE_HEADLINE: Record<StateKey, string> = {
 	yes: 'electricity is cheap right now',
-	sortof: 'middle of today’s range',
+	sortof: 'not cheap, not expensive',
 	no: 'wait if you can',
 	unknown: 'we don’t know right now',
 };

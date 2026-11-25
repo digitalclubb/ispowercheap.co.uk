@@ -11,7 +11,7 @@ export const ORIGIN = 'https://ispowercheap.co.uk';
 const STATE_ANSWER: Record<StateKey, string> = {
 	yes: 'Yes — electricity is cheap right now. Carbon intensity is in the low band; a good time to charge the EV or run the dishwasher.',
 	sortof:
-		'Sort of — middle of today’s range. Carbon intensity is moderate; not the cheapest hour but not the worst either.',
+		'Sort of — not cheap, not expensive. Carbon intensity is moderate; not the cheapest hour but not the worst either.',
 	no: 'No — wait if you can. Carbon intensity is high right now; consider deferring big electricity uses.',
 	unknown: 'We don’t know right now — the upstream live data feed is unavailable. Reload to retry.',
 };

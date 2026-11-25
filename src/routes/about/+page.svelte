@@ -71,12 +71,12 @@
 				<li>
 					Regional answers use the API's outward-postcode endpoint
 					(e.g. <code>SW1A</code>, <code>M1</code>). Region detection on the
-					home page uses Vercel edge geo headers; you can override via the
+					home page uses the IP-derived location header our host adds at the edge; you can override via the
 					"change" link.
 				</li>
 				<li>
-					Action chips ("good time for dishwasher / EV / dryer") scan the
-					next 48 hours of forecast for a contiguous window of the
+					Action chips ("best time for dishwasher / EV / dryer") scan the
+					next 24 hours of forecast for a contiguous window of the
 					appropriate duration where the majority of half-hours classify
 					as low or very low.
 				</li>
@@ -117,7 +117,7 @@ GET <a href="/api/now?postcode=SW1A">https://ispowercheap.co.uk/api/now?postcode
 			<h2>privacy</h2>
 			<p>
 				No accounts, no tracking, no analytics, no cookie banner. Region detection
-				uses the IP-derived header Vercel adds at the edge — never stored. If you
+				uses the IP-derived location header our host adds at the edge — never stored. If you
 				opt in to the postcode lookup via your browser, your latitude/longitude
 				is truncated to ~110 m before being sent to postcodes.io.
 			</p>

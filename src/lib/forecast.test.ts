@@ -1,110 +1,125 @@
 import { describe, expect, it } from 'vitest';
-import { FORECAST_WINDOW_PERIODS, findUpcomingExtremes, upcomingExtremes } from './forecast.js';
-import type { CarbonIntensityPoint, IntensityIndex } from './types.js';
+import { alignToNow, cheapSpell, cheapestWindow, describeWindow } from './forecast.js';
+import type { CarbonIntensityPoint, NowAnswer } from './types.js';
 
-function pt(forecast: number, hour: number, minute = 0): CarbonIntensityPoint {
-	const h = String(hour).padStart(2, '0');
-	const m = String(minute).padStart(2, '0');
-	const from = `2026-05-09T${h}:${m}Z`;
-	return { from, to: from, forecast, actual: null, index: 'moderate' as IntensityIndex };
-}
+const STEP_MS = 30 * 60 * 1000;
+const START = Date.parse('2026-11-25T10:00Z');
 
-/** A run of consecutive half-hour settlement periods starting at `startMs`. */
-function halfHourly(startMs: number, forecasts: number[]): CarbonIntensityPoint[] {
-	const STEP_MS = 30 * 60 * 1000;
+function halfHourly(
+	forecasts: number[],
+	index: (i: number) => CarbonIntensityPoint['index'] = () => 'moderate',
+): CarbonIntensityPoint[] {
 	return forecasts.map((forecast, i) => ({
-		from: new Date(startMs + i * STEP_MS).toISOString(),
-		to: new Date(startMs + (i + 1) * STEP_MS).toISOString(),
+		from: new Date(START + i * STEP_MS).toISOString(),
+		to: new Date(START + (i + 1) * STEP_MS).toISOString(),
 		forecast,
 		actual: null,
-		index: 'moderate' as IntensityIndex,
+		index: index(i),
 	}));
 }
 
-const NOW = Date.parse('2026-05-09T12:00Z');
-
-describe('findUpcomingExtremes', () => {
-	it('returns null for an empty forecast', () => {
-		expect(findUpcomingExtremes([], NOW)).toBe(null);
+describe('cheapestWindow', () => {
+	it('returns null when there is too little data', () => {
+		expect(cheapestWindow(halfHourly([1, 2]), 3)).toBe(null);
 	});
 
-	it('returns null when every point is in the past', () => {
-		const points = [pt(50, 8), pt(100, 10), pt(80, 11)];
-		expect(findUpcomingExtremes(points, NOW)).toBe(null);
+	it('returns null for a flat forecast', () => {
+		expect(cheapestWindow(halfHourly([100, 100, 100, 100]), 2)).toBe(null);
 	});
 
-	it('finds the lowest and highest forecast in upcoming periods', () => {
-		const points = [
-			pt(50, 8), // past, ignored
-			pt(200, 13), // peak
-			pt(80, 14),
-			pt(40, 15), // cheapest
-			pt(120, 16),
-		];
-		const result = findUpcomingExtremes(points, NOW);
-		expect(result?.cheapest.forecast).toBe(40);
-		expect(result?.peak.forecast).toBe(200);
-		expect(result?.cheapest.from).toBe('2026-05-09T15:00Z');
-		expect(result?.peak.from).toBe('2026-05-09T13:00Z');
+	it('picks the lowest-average stretch, not the single lowest half-hour', () => {
+		// lone dip of 10 at idx 1 vs a sustained 30s run at idx 4–6
+		const w = cheapestWindow(halfHourly([200, 10, 200, 200, 30, 30, 30, 200]), 3);
+		expect(w?.startIdx).toBe(4);
+		expect(w?.from).toBe(new Date(START + 4 * STEP_MS).toISOString());
+		expect(w?.to).toBe(new Date(START + 7 * STEP_MS).toISOString());
 	});
 
-	it('excludes points whose from is exactly now (strictly future)', () => {
-		const points = [
-			pt(1000, 12), // exactly NOW — excluded by strict >
-			pt(20, 13),
-			pt(80, 14),
-		];
-		const result = findUpcomingExtremes(points, NOW);
-		expect(result?.cheapest.forecast).toBe(20);
-		expect(result?.peak.forecast).toBe(80);
+	it('can start now (index 0)', () => {
+		expect(cheapestWindow(halfHourly([10, 10, 50, 90]), 2)?.startIdx).toBe(0);
 	});
 
-	it('returns null when only one upcoming point exists (no contrast)', () => {
-		const points = [pt(50, 8), pt(80, 13)]; // one past, one future
-		expect(findUpcomingExtremes(points, NOW)).toBe(null);
-	});
-
-	it('returns null when the upcoming forecast is flat', () => {
-		const points = [pt(100, 13), pt(100, 14), pt(100, 15)];
-		expect(findUpcomingExtremes(points, NOW)).toBe(null);
-	});
-
-	it('handles half-hour granularity correctly', () => {
-		const points = [
-			pt(50, 11, 30), // started before NOW (11:30), excluded
-			pt(60, 12, 30), // first future
-			pt(40, 13, 0), // cheapest
-			pt(150, 13, 30), // peak
-		];
-		const result = findUpcomingExtremes(points, NOW);
-		expect(result?.cheapest.from).toBe('2026-05-09T13:00Z');
-		expect(result?.peak.from).toBe('2026-05-09T13:30Z');
+	it('only looks at the 24 h chart window', () => {
+		const points = halfHourly([...Array(48).fill(100), 1, 1, 1]);
+		expect(cheapestWindow(points, 3)).toBe(null); // first 48 are flat
 	});
 });
 
-describe('upcomingExtremes', () => {
-	it('excludes the half-hour already in progress', () => {
-		// Index 0 starts exactly at NOW — the period we're partway through.
-		const points = halfHourly(NOW, [10, 70, 40, 200]);
-		const result = upcomingExtremes(points, NOW);
-		expect(result?.cheapest.forecast).toBe(40); // not the 10 at index 0
-		expect(result?.peak.forecast).toBe(200);
+describe('describeWindow', () => {
+	const now = '2026-11-25T10:00Z';
+	it('says "tomorrow" once when the whole stretch is tomorrow', () => {
+		const w = { startIdx: 5, from: '2026-11-26T03:30Z', to: '2026-11-26T06:30Z' };
+		expect(describeWindow(w, now)).toBe('03:30–06:30 tomorrow');
+	});
+	it('says "now" when the stretch starts with the current half-hour', () => {
+		const w = { startIdx: 0, from: '2026-11-25T10:00Z', to: '2026-11-25T13:00Z' };
+		expect(describeWindow(w, now)).toBe('now–13:00');
+	});
+});
+
+describe('cheapSpell', () => {
+	const at = (i: number) => new Date(START + i * STEP_MS).toISOString();
+	const four = [1, 2, 3, 4];
+
+	it('says when the current cheap spell ends', () => {
+		const pts = halfHourly(four, (i) => (i < 2 ? 'low' : 'moderate'));
+		expect(cheapSpell(pts)).toEqual({ kind: 'until', at: at(2) });
 	});
 
-	it('ignores forecast beyond the next 24 hours (the window the chart draws)', () => {
-		// 48 periods inside the window — index 0 is the in-progress one, so the
-		// contrast lives at indices 1 (cheapest) and 2 (peak) — then two cheaper
-		// / peakier periods just past the window that must be sliced off.
-		const inWindow = Array.from({ length: FORECAST_WINDOW_PERIODS }, (_, i) =>
-			i === 1 ? 30 : i === 2 ? 250 : 100,
-		);
-		const points = halfHourly(NOW, [...inWindow, 1, 999]);
-		const result = upcomingExtremes(points, NOW);
-		expect(result?.cheapest.forecast).toBe(30); // not the 1 at index 48
-		expect(result?.peak.forecast).toBe(250); // not the 999 at index 49
+	it('says all-day only when cheap across a full 24 h of data', () => {
+		const full = halfHourly(Array(48).fill(1), () => 'very low');
+		expect(cheapSpell(full)).toEqual({ kind: 'all-day' });
+		// short data: say until the end of what we know, never "24 hours"
+		expect(cheapSpell(halfHourly(four, () => 'very low'))).toEqual({ kind: 'until', at: at(4) });
 	});
 
-	it('returns null when there is no upcoming data', () => {
-		expect(upcomingExtremes([], NOW)).toBe(null);
+	it('says when the next cheap spell starts', () => {
+		const pts = halfHourly(four, (i) => (i === 3 ? 'low' : 'high'));
+		expect(cheapSpell(pts)).toEqual({ kind: 'from', at: at(3) });
+	});
+
+	it('is null when nothing is cheap', () => {
+		expect(cheapSpell(halfHourly(four))).toBe(null);
+		expect(cheapSpell([])).toBe(null);
+	});
+});
+
+describe('alignToNow', () => {
+	// periods 10:00, 10:30, 11:00, 11:30; 10:00 is cheap, the rest are not
+	const forecast = halfHourly([1, 2, 3, 4], (i) => (i === 0 ? 'low' : 'high'));
+	const base: NowAnswer = {
+		state: 'no',
+		current: { ...forecast[0], from: '2026-11-25T09:30Z', index: 'high' }, // lagging upstream
+		forecast,
+		fetchedAt: '2026-11-25T10:13Z',
+		region: { kind: 'national', label: 'Great Britain' },
+		sources: [],
+	};
+	const t = (hhmm: string) => Date.parse(`2026-11-25T${hhmm}Z`);
+
+	it('answers from the period underway, not the lagging upstream one', () => {
+		const out = alignToNow(base, t('10:13'));
+		expect(out.current).toBe(forecast[0]);
+		expect(out.state).toBe('yes');
+		expect(out.forecast).toHaveLength(4);
+	});
+
+	it('moves on with the clock: a stale answer re-derives state and drops the past', () => {
+		const later = alignToNow(alignToNow(base, t('10:13')), t('11:05'));
+		expect(later.current).toBe(forecast[2]);
+		expect(later.state).toBe('no');
+		expect(later.forecast).toEqual(forecast.slice(2));
+	});
+
+	it('is a no-op within the same period, keeping a ?state= override', () => {
+		const aligned = { ...alignToNow(base, t('10:13')), state: 'sortof' as const };
+		expect(alignToNow(aligned, t('10:20'))).toBe(aligned);
+	});
+
+	it('drops the forecast when nothing covers now (no false "now" claims)', () => {
+		const out = alignToNow(base, t('09:45'));
+		expect(out.forecast).toEqual([]);
+		expect(out.current).toBe(base.current);
+		expect(alignToNow(base, t('13:00')).forecast).toEqual([]);
 	});
 });

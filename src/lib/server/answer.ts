@@ -1,4 +1,5 @@
 import { dnoFromRegionId } from '../agile.js';
+import { alignToNow } from '../forecast.js';
 import { deriveState } from '../state.js';
 import type { CarbonIntensityPoint, NowAnswer, RegionInfo, StateKey } from '../types.js';
 import { fetchCurrentIntensity, fetchForecast, fetchRegionalIntensity } from './carbonIntensity.js';
@@ -77,48 +78,13 @@ export interface StateOnlyResult {
 }
 
 /**
- * Slim path for /og.png — derive just the state and region label without
- * paying for the 48-hour forecast. The OG image only renders state word +
- * headline + brand line, all driven by `state`.
+ * State + region only, for /og.png. Goes through `buildAnswer` so the preview
+ * image can never disagree with the page (it used to read the lagging
+ * /intensity endpoint directly and could show the previous half-hour's state).
  */
 export async function buildStateOnly(ctx: AnswerContext): Promise<StateOnlyResult> {
-	const { region, source } = ctx.regionOverride
-		? {
-				region: {
-					kind: 'postcode' as const,
-					label: ctx.regionOverride.label,
-					postcode: ctx.regionOverride.postcode,
-				},
-				source: 'url' as const,
-			}
-		: resolveRegion({ url: ctx.url, request: ctx.request });
-	let resolvedRegion: RegionInfo = region;
-	let effectiveSource = source;
-	let current: CarbonIntensityPoint | null = null;
-
-	if (region.kind === 'postcode' && region.postcode) {
-		const regional = await fetchRegionalIntensity(region.postcode, ctx.fetch);
-		if (regional) {
-			current = regional.point;
-			resolvedRegion = {
-				...region,
-				label: regional.shortname ? `${regional.shortname} (${region.postcode})` : region.postcode,
-				dnoCode: dnoFromRegionId(regional.regionid),
-			};
-		} else {
-			current = await fetchCurrentIntensity(ctx.fetch);
-			resolvedRegion = { kind: 'national', label: 'Great Britain' };
-			effectiveSource = 'national';
-		}
-	} else {
-		current = await fetchCurrentIntensity(ctx.fetch);
-	}
-
-	return {
-		state: deriveState(current?.index),
-		source: effectiveSource,
-		region: resolvedRegion,
-	};
+	const { answer, source } = await buildAnswer(ctx);
+	return { state: answer.state, source, region: answer.region };
 }
 
 /**
@@ -172,14 +138,18 @@ export async function buildAnswer(ctx: AnswerContext): Promise<AnswerResult> {
 		forecast = fallback.forecast;
 	}
 
-	const answer: NowAnswer = {
-		state: deriveState(current?.index),
-		current,
-		forecast,
-		fetchedAt: new Date().toISOString(),
-		region: resolvedRegion,
-		sources: ['carbonintensity.org.uk'],
-	};
+	const nowMs = Date.now();
+	const answer: NowAnswer = alignToNow(
+		{
+			state: deriveState(current?.index),
+			current,
+			forecast,
+			fetchedAt: new Date(nowMs).toISOString(),
+			region: resolvedRegion,
+			sources: ['carbonintensity.org.uk'],
+		},
+		nowMs,
+	);
 
 	return { answer, source: effectiveSource };
 }

@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { CHIPS, chipVerdict } from '$lib/chips.js';
-	import { formatTime } from '$lib/format.js';
+	import { FORECAST_WINDOW_PERIODS } from '$lib/forecast.js';
+	import { formatTimeWithDay } from '$lib/format.js';
 	import type { CarbonIntensityPoint } from '$lib/types.js';
 
-	let { points }: { points: CarbonIntensityPoint[] } = $props();
+	// Same 24 h window as the chart, so a chip never names a time the chart doesn't show.
+	let { points, now }: { points: CarbonIntensityPoint[]; now: string } = $props();
+	const next24 = $derived(points.slice(0, FORECAST_WINDOW_PERIODS));
 </script>
 
 <ul class="chips">
 	{#each CHIPS as chip (chip.id)}
-		{@const verdict = chipVerdict(points, chip.slots)}
+		{@const verdict = chipVerdict(next24, chip.slots)}
 		<li class="chip" data-state={verdict?.kind ?? 'unknown'}>
 			<span class="dot" aria-hidden="true">
 				{#if verdict?.kind === 'good-now'}●{:else if verdict?.kind === 'good-later'}○{:else}—{/if}
@@ -16,11 +19,15 @@
 			<span class="label">{chip.label}</span>
 			<span class="hint">
 				{#if verdict?.kind === 'good-now'}
-					good time
+					good time now
 				{:else if verdict?.kind === 'good-later'}
-					cheapest from {formatTime(verdict.startISO)}
+					cheapest from {formatTimeWithDay(verdict.startISO, now)}
 				{:else if verdict?.kind === 'no-good-window'}
-					no cheap window in 48 h
+					{#if verdict.startISO === next24[0]?.from}
+						least bad now
+					{:else}
+						least bad from {formatTimeWithDay(verdict.startISO, now)}
+					{/if}
 				{:else}
 					—
 				{/if}

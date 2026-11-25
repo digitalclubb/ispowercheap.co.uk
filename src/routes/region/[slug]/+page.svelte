@@ -5,7 +5,7 @@
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import StateShape from '$lib/components/StateShape.svelte';
 	import Timestamps from '$lib/components/Timestamps.svelte';
-	import { upcomingExtremes } from '$lib/forecast.js';
+	import { alignToNow, cheapestWindow } from '$lib/forecast.js';
 	import { startPolling } from '$lib/livePolling.js';
 	import { siblingLocations } from '$lib/locations.js';
 	import { describeAnswer, faqJsonLd, locationJsonLd, ORIGIN } from '$lib/seo.js';
@@ -17,7 +17,18 @@
 	let { data }: { data: PageData } = $props();
 
 	let polledAnswer = $state<NowAnswer | null>(null);
-	const answer = $derived(polledAnswer ?? data.answer);
+	// Re-align to the real clock every minute: forecast[0] must be the
+	// half-hour underway, or an offline/old answer keeps claiming "now".
+	let nowMs = $state(Date.now());
+	$effect(() => {
+		nowMs = Date.now();
+		const id = setInterval(() => {
+			nowMs = Date.now();
+		}, 60_000);
+		return () => clearInterval(id);
+	});
+	const now = $derived(new Date(nowMs).toISOString());
+	const answer = $derived(alignToNow(polledAnswer ?? data.answer, nowMs));
 	const location = $derived(data.location);
 
 	$effect(() => {
@@ -44,18 +55,15 @@
 
 	const siblings = $derived(siblingLocations(location));
 
-	const isStale = $derived.by(() => {
-		if (!answer.current?.from) return false;
-		const ageMs = Date.now() - new Date(answer.current.from).getTime();
-		return ageMs > 45 * 60 * 1000;
-	});
+	// Stale when we haven't refreshed for 45 min (offline, polling failing) or
+	// the upstream feed has stalled. Carbon Intensity publishes every 30 min.
+	const isStale = $derived(
+		nowMs - Date.parse(answer.fetchedAt) > 45 * 60 * 1000 ||
+			(answer.current !== null && nowMs - Date.parse(answer.current.from) > 45 * 60 * 1000),
+	);
 
-	// Cheapest / peak in the next 24 hours, computed once and handed to both
-	// Outlook and Sparkline so the headline readout, the chart caption and its
-	// ↓/↑ markers all agree. Future-only: the half-hour already underway never
-	// wins. Anchored to `fetchedAt` rather than Date.now() so the server render
-	// and the client hydrate agree; it advances each time polling ships fresh data.
-	const upcoming = $derived(upcomingExtremes(answer.forecast, Date.parse(answer.fetchedAt)));
+	// Cheapest 3 h stretch in the next 24 h, shared by Outlook and the chart so they agree.
+	const best = $derived(cheapestWindow(answer.forecast));
 </script>
 
 <svelte:head>
@@ -94,12 +102,7 @@
 		<p class="supporting">
 			{STATE_HEADLINE[answer.state]} <span class="dim">in {location.name}</span>
 		</p>
-		{#if answer.current}
-			<p class="micro">
-				{answer.current.forecast}&thinsp;gCO₂/kWh
-			</p>
-		{/if}
-		<Outlook extremes={upcoming} now={answer.fetchedAt} />
+		<Outlook points={answer.forecast} {best} {now} />
 		<Timestamps current={answer.current} {isStale} />
 		<p class="region-pill">
 			{location.name} · DNO {location.dnoCode} · {location.dnoName}
@@ -109,12 +112,12 @@
 	{#if answer.forecast.length}
 		<section class="forecast" aria-labelledby="forecast-heading">
 			<h2 id="forecast-heading" class="section-heading">next 24 hours</h2>
-			<Sparkline points={answer.forecast} extremes={upcoming} now={answer.fetchedAt} />
+			<Sparkline points={answer.forecast} {best} {now} />
 		</section>
 
 		<section class="chips" aria-labelledby="chips-heading">
-			<h2 id="chips-heading" class="section-heading">good time for…</h2>
-			<ActionChips points={answer.forecast} />
+			<h2 id="chips-heading" class="section-heading">best time for…</h2>
+			<ActionChips points={answer.forecast} {now} />
 		</section>
 	{/if}
 
@@ -234,12 +237,6 @@
 	}
 	.supporting .dim {
 		opacity: 0.7;
-	}
-	.micro {
-		font-size: var(--micro-size);
-		opacity: var(--opacity-tertiary);
-		margin: 0;
-		font-variant-numeric: tabular-nums;
 	}
 	.region-pill {
 		font-size: var(--micro-size);

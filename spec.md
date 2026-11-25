@@ -34,7 +34,7 @@ For the Agile minority who *do* see real-time prices, an opt-in price overlay sh
 | State | Carbon Intensity API `index` | Spoken word |
 |---|---|---|
 | YES | `very low`, `low` | "yes — power is cheap right now" |
-| SORT OF | `moderate` | "sort of — middle of today's range" |
+| SORT OF | `moderate` | "sort of — not cheap, not expensive" |
 | NO | `high`, `very high` | "no — wait if you can" |
 | UNKNOWN | data fetch failed / >45 min stale | "we don't know right now — sorry" |
 
