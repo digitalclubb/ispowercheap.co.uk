@@ -1,5 +1,5 @@
-import { buildAnswer, cacheHeadersFor } from '$lib/server/answer.js';
-import type { StateKey } from '$lib/types.js';
+import { buildAnswer, cacheHeadersFor } from '#lib/server/answer.js';
+import type { StateKey } from '#lib/types.js';
 import type { PageServerLoad } from './$types.js';
 
 const STATES: readonly StateKey[] = ['yes', 'sortof', 'no', 'unknown'];

@@ -27,16 +27,16 @@ ispowercheap.co.uk's position: **the carbon-intensity ecosystem has the right da
 **Why carbon-intensity-led, not price-led:**
 ~95% of UK households pay a fixed unit rate. For them, "is electricity cheap?" cannot be answered honestly in money — their bill is the same at 3am or 6pm. The only honest "should I use power now?" signal is **carbon intensity**: when wind/solar are meeting most of demand, the grid is greener and (over time) wholesale prices push fixed rates down. So we say "yes, it's cheap" when **carbon intensity is in the bottom band for the country/region**, with a one-line reason ("wind is meeting 62% of demand right now").
 
-For the Agile minority who *do* see real-time prices, an opt-in price overlay shows their actual half-hourly rate.
+For the Agile minority who _do_ see real-time prices, an opt-in price overlay shows their actual half-hourly rate.
 
 **State derivation:**
 
-| State | Carbon Intensity API `index` | Spoken word |
-|---|---|---|
-| YES | `very low`, `low` | "yes — power is cheap right now" |
-| SORT OF | `moderate` | "sort of — not cheap, not expensive" |
-| NO | `high`, `very high` | "no — wait if you can" |
-| UNKNOWN | data fetch failed / >45 min stale | "we don't know right now — sorry" |
+| State   | Carbon Intensity API `index`      | Spoken word                          |
+| ------- | --------------------------------- | ------------------------------------ |
+| YES     | `very low`, `low`                 | "yes — power is cheap right now"     |
+| SORT OF | `moderate`                        | "sort of — not cheap, not expensive" |
+| NO      | `high`, `very high`               | "no — wait if you can"               |
+| UNKNOWN | data fetch failed / >45 min stale | "we don't know right now — sorry"    |
 
 We use the API's `index` field as the canonical state. The API is run by NESO + EDF + Oxford + WWF and computes the bands from a UK-wide rolling distribution — more authoritative than anything we'd compute locally, and saves us holding 30 days of state.
 
@@ -91,17 +91,17 @@ data: National Energy System Operator (CC BY 4.0)
 
 Each chip has a typical duration; chip turns green only if the **average forecast intensity** across the next N half-hours stays in `low/very low`. If not, show the next start time when it would.
 
-| Chip | Duration | Reason |
-|---|---|---|
-| Dishwasher | 2h | typical eco cycle |
-| Washing machine | 1.5h | 30–40°C cycle |
-| Tumble dryer | 1.5h | typical cycle |
-| EV top-up | 4h | partial overnight charge, ~80 mi added |
-| EV full charge | 8h | overnight 7kW charge, 0→100% |
-| Immersion heater | 1.5h | reheat tank |
-| Oven (1h roast) | 1h | dinner |
+| Chip             | Duration | Reason                                 |
+| ---------------- | -------- | -------------------------------------- |
+| Dishwasher       | 2h       | typical eco cycle                      |
+| Washing machine  | 1.5h     | 30–40°C cycle                          |
+| Tumble dryer     | 1.5h     | typical cycle                          |
+| EV top-up        | 4h       | partial overnight charge, ~80 mi added |
+| EV full charge   | 8h       | overnight 7kW charge, 0→100%           |
+| Immersion heater | 1.5h     | reheat tank                            |
+| Oven (1h roast)  | 1h       | dinner                                 |
 
-Algorithm: given the 48-half-hour forecast from `/intensity/.../fw48h`, for each chip find the rolling-average minimum window of length `duration / 0.5` half-hours where the average index is `low/very low`. Show ✓ if the cheapest window starts *now* (within the current half-hour), else show ✗ with the start time.
+Algorithm: given the 48-half-hour forecast from `/intensity/.../fw48h`, for each chip find the rolling-average minimum window of length `duration / 0.5` half-hours where the average index is `low/very low`. Show ✓ if the cheapest window starts _now_ (within the current half-hour), else show ✗ with the start time.
 
 ### 3.4 Geolocation flow
 
@@ -117,12 +117,12 @@ If everything fails, fall back to GB national. Never block the page on geolocati
 
 **Palette (WCAG AA, colour-blind safe via Okabe–Ito-derived hues):**
 
-| State | Background | Text | Contrast | Icon shape |
-|---|---|---|---|---|
-| YES | `#0E7C3A` | `#FFFFFF` | 6.4:1 | filled circle |
-| SORT OF | `#E69F00` | `#1A1A1A` | 7.8:1 | filled triangle |
-| NO | `#B3261E` | `#FFFFFF` | 6.0:1 | filled octagon |
-| UNKNOWN | `#1F2937` | `#FFFFFF` | 12:1 | filled square |
+| State   | Background | Text      | Contrast | Icon shape      |
+| ------- | ---------- | --------- | -------- | --------------- |
+| YES     | `#0E7C3A`  | `#FFFFFF` | 6.4:1    | filled circle   |
+| SORT OF | `#E69F00`  | `#1A1A1A` | 7.8:1    | filled triangle |
+| NO      | `#B3261E`  | `#FFFFFF` | 6.0:1    | filled octagon  |
+| UNKNOWN | `#1F2937`  | `#FFFFFF` | 12:1     | filled square   |
 
 State is communicated by **(a) the word**, **(b) the colour**, **(c) the icon shape** — colour-blind users get the answer from any one of the three.
 
@@ -132,7 +132,7 @@ Screen reader: the answer block is wrapped in `aria-live="polite"` so state chan
 
 ### 3.6 Motion
 
-**None on first paint.** The state colour is just *there*. The only acceptable motion: a 200ms cross-fade if state changes while the page is open (visibility-API-triggered re-poll every 5 minutes). A 1px live-dot in the footer pulses slowly (2s ease-in-out) — that's the maximum.
+**None on first paint.** The state colour is just _there_. The only acceptable motion: a 200ms cross-fade if state changes while the page is open (visibility-API-triggered re-poll every 5 minutes). A 1px live-dot in the footer pulses slowly (2s ease-in-out) — that's the maximum.
 
 ---
 
@@ -140,24 +140,24 @@ Screen reader: the answer block is wrapped in `aria-live="polite"` so state chan
 
 ### 4.1 Sources
 
-| Source | Purpose | Auth | CORS | Update | Notes |
-|---|---|---|---|---|---|
-| **Carbon Intensity API** (`api.carbonintensity.org.uk`) | Primary state + forecast | None | Yes | 30 min | National + 17 GSP regions + outward-postcode endpoint. CC BY 4.0 — must attribute. |
-| **Octopus Energy API** (`api.octopus.energy`) | Optional Agile price overlay | None for tariffs | **No** — server-side only | 30 min, next-day @ ~16:00 UK | DNO regions A–P (no I). 14 regions. |
-| **Postcodes.io** (`api.postcodes.io`) | Postcode → outward + lat/lon | None | Yes | n/a | Free, fast, UK-only. |
-| **Vercel geo headers** | First-paint default region | Built-in | n/a | per request | Free with Vercel hosting. |
+| Source                                                  | Purpose                      | Auth             | CORS                      | Update                       | Notes                                                                              |
+| ------------------------------------------------------- | ---------------------------- | ---------------- | ------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| **Carbon Intensity API** (`api.carbonintensity.org.uk`) | Primary state + forecast     | None             | Yes                       | 30 min                       | National + 17 GSP regions + outward-postcode endpoint. CC BY 4.0 — must attribute. |
+| **Octopus Energy API** (`api.octopus.energy`)           | Optional Agile price overlay | None for tariffs | **No** — server-side only | 30 min, next-day @ ~16:00 UK | DNO regions A–P (no I). 14 regions.                                                |
+| **Postcodes.io** (`api.postcodes.io`)                   | Postcode → outward + lat/lon | None             | Yes                       | n/a                          | Free, fast, UK-only.                                                               |
+| **Vercel geo headers**                                  | First-paint default region   | Built-in         | n/a                       | per request                  | Free with Vercel hosting.                                                          |
 
 ### 4.2 Cache strategy (Vercel)
 
-| Endpoint | TTL | SWR | Why |
-|---|---|---|---|
-| `GET /api/now?region=…` (our edge) | 60s | 5 min | Carbon Intensity changes every 30 min; 60s gives near-live without hammering upstream. |
-| Carbon Intensity `/intensity` calls | 60s | 5 min | Same cadence. |
-| Carbon Intensity `/intensity/.../fw48h` | 30 min | 6h | 48h forecast updates rarely. |
-| Octopus Agile rates (today, published) | 24h | 7d | Immutable once issued. |
-| Octopus Agile rates (next-day, before 16:00) | 60s | none | We want freshness when we know they're about to land. |
-| Octopus Agile rates (next-day, after 16:00 success) | 24h | 7d | Immutable. |
-| Postcode → region lookup | 1y | 1y | Stable. |
+| Endpoint                                            | TTL    | SWR   | Why                                                                                    |
+| --------------------------------------------------- | ------ | ----- | -------------------------------------------------------------------------------------- |
+| `GET /api/now?region=…` (our edge)                  | 60s    | 5 min | Carbon Intensity changes every 30 min; 60s gives near-live without hammering upstream. |
+| Carbon Intensity `/intensity` calls                 | 60s    | 5 min | Same cadence.                                                                          |
+| Carbon Intensity `/intensity/.../fw48h`             | 30 min | 6h    | 48h forecast updates rarely.                                                           |
+| Octopus Agile rates (today, published)              | 24h    | 7d    | Immutable once issued.                                                                 |
+| Octopus Agile rates (next-day, before 16:00)        | 60s    | none  | We want freshness when we know they're about to land.                                  |
+| Octopus Agile rates (next-day, after 16:00 success) | 24h    | 7d    | Immutable.                                                                             |
+| Postcode → region lookup                            | 1y     | 1y    | Stable.                                                                                |
 
 Implemented with SvelteKit's `cache` exports + Vercel's `Cache-Control: s-maxage=…, stale-while-revalidate=…` headers. No Vercel KV in v1 — edge cache headers are sufficient.
 
@@ -193,16 +193,16 @@ Implemented with SvelteKit's `cache` exports + Vercel's `Cache-Control: s-maxage
 
 ### 5.1 Performance budget
 
-| Metric | Budget |
-|---|---|
-| HTML payload (gzipped) | < 8 KB |
-| Total payload first load (gzipped, incl. font + icons) | < 35 KB |
-| Lighthouse Performance | 100 |
-| Lighthouse Accessibility | 100 |
-| Lighthouse Best Practices | 100 |
-| Lighthouse SEO | 100 |
-| Largest Contentful Paint | < 0.5s on 4G |
-| Time to Interactive | < 1s on 4G |
+| Metric                                                 | Budget       |
+| ------------------------------------------------------ | ------------ |
+| HTML payload (gzipped)                                 | < 8 KB       |
+| Total payload first load (gzipped, incl. font + icons) | < 35 KB      |
+| Lighthouse Performance                                 | 100          |
+| Lighthouse Accessibility                               | 100          |
+| Lighthouse Best Practices                              | 100          |
+| Lighthouse SEO                                         | 100          |
+| Largest Contentful Paint                               | < 0.5s on 4G |
+| Time to Interactive                                    | < 1s on 4G   |
 
 Achieved by: SSR, headline-only subset web font (~5 KB) + system-ui everywhere else, inline critical CSS, one tiny `app.js` (polling + theme-color sync + service-worker registration), no analytics in v1.
 
@@ -242,17 +242,17 @@ This is a glanceable utility used **on the go** — someone walking home wonderi
 ### 8.1 What we ship
 
 1. **Web app manifest** (`/manifest.webmanifest`):
-    - `name`: `ispowercheap`
-    - `short_name`: `ispowercheap`
-    - `start_url`: `/`
-    - `display`: `standalone`
-    - `theme_color` / `background_color`: a neutral that respects all four state colours; the *dynamic* state colour comes from `<meta name="theme-color">` in the document, which the OS picks up live.
-    - `icons`: 192 / 512 / maskable PNG, plus an Apple touch icon. Generated at build time from a single SVG source.
+   - `name`: `ispowercheap`
+   - `short_name`: `ispowercheap`
+   - `start_url`: `/`
+   - `display`: `standalone`
+   - `theme_color` / `background_color`: a neutral that respects all four state colours; the _dynamic_ state colour comes from `<meta name="theme-color">` in the document, which the OS picks up live.
+   - `icons`: 192 / 512 / maskable PNG, plus an Apple touch icon. Generated at build time from a single SVG source.
 2. **Service worker** (SvelteKit's built-in `src/service-worker.ts`) with three caches:
-    - **App shell** (`/`, CSS, JS, font, icons) — cache-first, revalidate in background. Keyed by build hash.
-    - **`/api/now` responses** — stale-while-revalidate, 60 s fresh / 24 h stale. If offline, serves the last-known answer with a small "offline — as of HH:MM" badge.
-    - **Static assets** (icons, manifest) — cache-first, immutable, content-hashed.
-3. **Install affordance** — listen to `beforeinstallprompt`; on the user's *second* visit, surface a discreet "add to home screen" link in the footer (never a popup, never above the fold). Apple devices get a one-line hint in the footer ("on iOS: share → add to home screen") detected via UA.
+   - **App shell** (`/`, CSS, JS, font, icons) — cache-first, revalidate in background. Keyed by build hash.
+   - **`/api/now` responses** — stale-while-revalidate, 60 s fresh / 24 h stale. If offline, serves the last-known answer with a small "offline — as of HH:MM" badge.
+   - **Static assets** (icons, manifest) — cache-first, immutable, content-hashed.
+3. **Install affordance** — listen to `beforeinstallprompt`; on the user's _second_ visit, surface a discreet "add to home screen" link in the footer (never a popup, never above the fold). Apple devices get a one-line hint in the footer ("on iOS: share → add to home screen") detected via UA.
 4. **Periodic Background Sync** where supported — refresh the cached `/api/now` every 30 min so the home-screen icon's state is current when next opened. Graceful no-op where unsupported.
 
 ### 8.2 Offline UX
@@ -274,18 +274,18 @@ This is a glanceable utility used **on the go** — someone walking home wonderi
 
 Each slice is a single PR / commit, builds on the previous, and is shippable on its own.
 
-| # | Slice | Acceptance criteria |
-|---|---|---|
-| 1 | **Project skeleton** — pnpm + SvelteKit + Vercel adapter + Biome + TS + base CSS tokens. Empty page renders "loading…". | `pnpm dev` runs, `pnpm build` produces a Vercel-ready bundle, Biome runs clean. |
-| 2 | **Carbon Intensity integration + state derivation** — server-side fetch, derive `YES/SORT OF/NO/UNKNOWN`, SSR the answer. National only. | Visit `/`, see correct state matching `api.carbonintensity.org.uk/intensity`. View source: answer is in HTML before JS runs. |
-| 3 | **Konklone-pure visual layer + headline font** — full-viewport bg colour, big-word answer using subsetted Inter 900 WOFF2 (preloaded), supporting line, theme-color meta tag, dark mode via `prefers-color-scheme`. | All four states render correctly via `?state=yes|sortof|no|unknown`. Lighthouse a11y 100. Font payload < 6 KB. |
-| 4 | **Geolocation flow** — Vercel geo headers for first paint, "use my location" opt-in, postcode entry fallback. Region label under answer. | Visit from a UK IP → regional answer. Click "use my location" → permission prompt → refined region. Type "SW1" → London region. |
-| 5 | **Forecast sparkline** — 24h forecast as bar chart below the fold, cheapest/worst slot annotations. Pure CSS or single inline SVG. | Sparkline renders with correct heights matching `/intensity/.../fw24h`. No external chart library. |
-| 6 | **Action chips with duration-aware logic** — windowed forecast scan, ✓/✗ + next start time. | Chip shows ✓ when current half-hour starts a cheap-enough window of its duration. Unit-tested with at least 6 fixtures. |
-| 7 | **Optional Agile price overlay** — small toggle "I'm on Octopus Agile", server-side fetch, show real p/kWh inline. Off by default. | Toggle persists in localStorage. With toggle on and DNO region known, current p/kWh shows under the answer. |
-| 8 | **Public JSON endpoint** — `/api/now?postcode=…` with CORS, documented in footer. | `curl …/api/now` returns valid JSON with state, intensity, forecast, sources. |
-| 9 | **PWA — manifest + service worker + offline + install** — installable, offline-resilient last-known answer, install affordance on second visit, periodic background sync. | Lighthouse PWA passes. Airplane-mode launch from home screen shows last-known answer within 200 ms. |
-| 10 | **Polish + ship** — favicon-as-state, OG image, dynamic title, footer attribution, humans.txt, error boundary. Lighthouse 100/100/100/100. | All performance budgets met. Deployed to Vercel preview + production. |
+| #   | Slice                                                                                                                                                                                                               | Acceptance criteria                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Project skeleton** — pnpm + SvelteKit + Vercel adapter + Biome + TS + base CSS tokens. Empty page renders "loading…".                                                                                             | `pnpm dev` runs, `pnpm build` produces a Vercel-ready bundle, Biome runs clean.                                                 |
+| 2   | **Carbon Intensity integration + state derivation** — server-side fetch, derive `YES/SORT OF/NO/UNKNOWN`, SSR the answer. National only.                                                                            | Visit `/`, see correct state matching `api.carbonintensity.org.uk/intensity`. View source: answer is in HTML before JS runs.    |
+| 3   | **Konklone-pure visual layer + headline font** — full-viewport bg colour, big-word answer using subsetted Inter 900 WOFF2 (preloaded), supporting line, theme-color meta tag, dark mode via `prefers-color-scheme`. | All four states render correctly via `?state=yes                                                                                | sortof | no  | unknown`. Lighthouse a11y 100. Font payload < 6 KB. |
+| 4   | **Geolocation flow** — Vercel geo headers for first paint, "use my location" opt-in, postcode entry fallback. Region label under answer.                                                                            | Visit from a UK IP → regional answer. Click "use my location" → permission prompt → refined region. Type "SW1" → London region. |
+| 5   | **Forecast sparkline** — 24h forecast as bar chart below the fold, cheapest/worst slot annotations. Pure CSS or single inline SVG.                                                                                  | Sparkline renders with correct heights matching `/intensity/.../fw24h`. No external chart library.                              |
+| 6   | **Action chips with duration-aware logic** — windowed forecast scan, ✓/✗ + next start time.                                                                                                                         | Chip shows ✓ when current half-hour starts a cheap-enough window of its duration. Unit-tested with at least 6 fixtures.         |
+| 7   | **Optional Agile price overlay** — small toggle "I'm on Octopus Agile", server-side fetch, show real p/kWh inline. Off by default.                                                                                  | Toggle persists in localStorage. With toggle on and DNO region known, current p/kWh shows under the answer.                     |
+| 8   | **Public JSON endpoint** — `/api/now?postcode=…` with CORS, documented in footer.                                                                                                                                   | `curl …/api/now` returns valid JSON with state, intensity, forecast, sources.                                                   |
+| 9   | **PWA — manifest + service worker + offline + install** — installable, offline-resilient last-known answer, install affordance on second visit, periodic background sync.                                           | Lighthouse PWA passes. Airplane-mode launch from home screen shows last-known answer within 200 ms.                             |
+| 10  | **Polish + ship** — favicon-as-state, OG image, dynamic title, footer attribution, humans.txt, error boundary. Lighthouse 100/100/100/100.                                                                          | All performance budgets met. Deployed to Vercel preview + production.                                                           |
 
 Estimated total effort: ~3 days of focused work (PWA adds ~half a day).
 
@@ -293,15 +293,15 @@ Estimated total effort: ~3 days of focused work (PWA adds ~half a day).
 
 ## 10. Risks and open questions
 
-| Risk | Mitigation |
-|---|---|
-| Carbon Intensity API outage | `UNKNOWN` state with last-known cached value; clear messaging. |
-| Octopus rate-limiting Agile fetches | Cache aggressively; one fetch per region per 30 min; lazy on demand only when toggle is on. |
-| User on Agile but in a region we can't auto-detect | Manual region picker (DNO A–P) inside the Agile toggle panel. |
-| `index` band feels wrong locally (e.g., the API says `moderate` but locally it's actually one of the cheapest hours) | v1 trusts the API's national distribution. v1.x can layer a region-specific tercile on top. |
-| Vercel geo headers wrong (VPN, mobile carrier IP) | "use my location" and postcode entry both override silently. |
-| Attribution/branding requirements from CC BY 4.0 | Footer line: "Carbon data: National Energy System Operator, EDF, University of Oxford, WWF — CC BY 4.0." |
-| ENTSO-E / Nord Pool licensing if we add wholesale view later | Out of v1 scope; flagged for any v1.x wholesale layer. |
+| Risk                                                                                                                 | Mitigation                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Carbon Intensity API outage                                                                                          | `UNKNOWN` state with last-known cached value; clear messaging.                                           |
+| Octopus rate-limiting Agile fetches                                                                                  | Cache aggressively; one fetch per region per 30 min; lazy on demand only when toggle is on.              |
+| User on Agile but in a region we can't auto-detect                                                                   | Manual region picker (DNO A–P) inside the Agile toggle panel.                                            |
+| `index` band feels wrong locally (e.g., the API says `moderate` but locally it's actually one of the cheapest hours) | v1 trusts the API's national distribution. v1.x can layer a region-specific tercile on top.              |
+| Vercel geo headers wrong (VPN, mobile carrier IP)                                                                    | "use my location" and postcode entry both override silently.                                             |
+| Attribution/branding requirements from CC BY 4.0                                                                     | Footer line: "Carbon data: National Energy System Operator, EDF, University of Oxford, WWF — CC BY 4.0." |
+| ENTSO-E / Nord Pool licensing if we add wholesale view later                                                         | Out of v1 scope; flagged for any v1.x wholesale layer.                                                   |
 
 ---
 

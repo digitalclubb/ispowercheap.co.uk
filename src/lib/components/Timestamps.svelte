@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatTime } from '$lib/format.js';
-	import type { CarbonIntensityPoint } from '$lib/types.js';
+	import { formatTime } from '#lib/format.js';
+	import type { CarbonIntensityPoint } from '#lib/types.js';
 
 	let { current, isStale }: { current: CarbonIntensityPoint | null; isStale: boolean } = $props();
 

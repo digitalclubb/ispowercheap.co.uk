@@ -1,10 +1,10 @@
+import no from '#lib/assets/og/no.png';
+import sortof from '#lib/assets/og/sortof.png';
+import unknown from '#lib/assets/og/unknown.png';
+import yes from '#lib/assets/og/yes.png';
+import { buildStateOnly, cacheHeadersFor } from '#lib/server/answer.js';
+import type { StateKey } from '#lib/types.js';
 import { read } from '$app/server';
-import no from '$lib/assets/og/no.png';
-import sortof from '$lib/assets/og/sortof.png';
-import unknown from '$lib/assets/og/unknown.png';
-import yes from '$lib/assets/og/yes.png';
-import { buildStateOnly, cacheHeadersFor } from '$lib/server/answer.js';
-import type { StateKey } from '$lib/types.js';
 import type { RequestHandler } from './$types.js';
 
 /**

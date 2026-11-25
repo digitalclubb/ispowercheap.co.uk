@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { findLocation } from '$lib/locations.js';
-import { buildAnswer, cacheHeadersFor } from '$lib/server/answer.js';
+import { findLocation } from '#lib/locations.js';
+import { buildAnswer, cacheHeadersFor } from '#lib/server/answer.js';
 import type { PageServerLoad } from './$types.js';
 
 export const load: PageServerLoad = async ({ params, fetch, request, url, setHeaders }) => {

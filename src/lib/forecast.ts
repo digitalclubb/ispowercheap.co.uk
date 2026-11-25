@@ -1,6 +1,6 @@
-import type { CarbonIntensityPoint, NowAnswer } from './types.js';
 import { formatTimeWithDay } from './format.js';
 import { deriveState } from './state.js';
+import type { CarbonIntensityPoint, NowAnswer } from './types.js';
 
 /**
  * Half-hour periods in the "next 24 hours" chart. The chart, the outlook line

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignToNow, cheapSpell, cheapestWindow, describeWindow } from './forecast.js';
+import { alignToNow, cheapestWindow, cheapSpell, describeWindow } from './forecast.js';
 import type { CarbonIntensityPoint, NowAnswer } from './types.js';
 
 const STEP_MS = 30 * 60 * 1000;

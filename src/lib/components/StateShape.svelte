@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { StateKey } from '$lib/types.js';
+	import type { StateKey } from '#lib/types.js';
 
 	let { state }: { state: StateKey } = $props();
 </script>

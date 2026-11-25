@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { beforeNavigate } from '$app/navigation';
 	import '../app.css';
 
 	let { children } = $props();
@@ -39,15 +40,14 @@
 	});
 
 	// Production-only SW upgrade safety net. When a new build ships, the new
-	// service worker installs in the background and activates via
-	// `clients.claim()` — but the page might already have rendered against
-	// the old build's HTML, referencing asset hashes the new SW doesn't have
-	// in its precache. The result is broken layout that even a hard refresh
-	// can't fix (Cmd+Shift+R doesn't bypass the SW). This listener catches
-	// the controller transition and reloads once, getting fresh HTML through
-	// the new SW. **Skipped in dev** — the dev-mode unregister above owns the
-	// SW lifecycle and a controllerchange listener here would race with its
-	// `unregister()` call to produce reload loops.
+	// service worker installs in the background and takes control via
+	// `clients.claim()`, but this page was rendered by the old build. Rather
+	// than reloading mid-session (which, if it lands while the user is
+	// clicking a link, aborts the navigation and reloads the *current* page),
+	// we note the update and turn the next link click into a full page load to
+	// its destination. **Skipped in dev**: the dev-mode unregister above owns
+	// the SW lifecycle there.
+	let swUpdated = false;
 	$effect(() => {
 		if (
 			import.meta.env.DEV ||
@@ -56,18 +56,24 @@
 		) {
 			return;
 		}
+		// First-ever visit: the first controllerchange is the initial claim, not an upgrade.
 		let alreadyHadController = navigator.serviceWorker.controller !== null;
 		function onControllerChange() {
-			if (alreadyHadController) {
-				window.location.reload();
-				return;
-			}
-			alreadyHadController = navigator.serviceWorker.controller !== null;
+			if (alreadyHadController) swUpdated = true;
+			alreadyHadController = true;
 		}
 		navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 		return () => {
 			navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
 		};
+	});
+	// Link clicks only: back/forward must keep traversing history, and
+	// programmatic goto()s (silent geo refine, region picker) must stay in-page.
+	// cancel() first so Kit's client-side navigation doesn't race the full load.
+	beforeNavigate(({ willUnload, to, type, cancel }) => {
+		if (!swUpdated || willUnload || type !== 'link' || !to?.url) return;
+		cancel();
+		location.href = to.url.href;
 	});
 
 	// Production-only critical-asset failure recovery. If a build asset 404s

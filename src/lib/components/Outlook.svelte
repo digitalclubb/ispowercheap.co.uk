@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { type BestWindow, cheapSpell, describeWindow } from '$lib/forecast.js';
-	import { formatTimeWithDay } from '$lib/format.js';
-	import type { CarbonIntensityPoint } from '$lib/types.js';
+	import { type BestWindow, cheapSpell, describeWindow } from '#lib/forecast.js';
+	import { formatTimeWithDay } from '#lib/format.js';
+	import type { CarbonIntensityPoint } from '#lib/types.js';
 
 	// Two plain answers under the headline: how long the current state lasts,
 	// and the cheapest stretch ahead (the same one the chart highlights).

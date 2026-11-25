@@ -5,7 +5,9 @@ The full v1 spec lives at `spec.md`. This file holds context that should bias ev
 
 ## Tech stack
 
-- **pnpm + SvelteKit + Cloudflare Workers** (`@sveltejs/adapter-cloudflare@7` — v8+ needs Kit 3). Config in `wrangler.jsonc`; `nodejs_als` flag is required for `getRequestEvent()`.
+- **pnpm + SvelteKit 3 + Cloudflare Workers** (`@sveltejs/adapter-cloudflare@9`). Kit config is passed to `sveltekit({...})` in `vite.config.ts` (no `svelte.config.js`). `wrangler.jsonc` holds name/routes/flags only — the adapter sets `main`/`assets` and generates the deploy config; `nodejs_als` flag is required for `getRequestEvent()`.
+- **Imports use `#lib/...`** (package.json `imports`), not `$lib` — Kit 3 removed it.
+- **TypeScript stays on 6.x** until svelte-check supports TS 7 (native port has no JS API).
 - **TypeScript strict.**
 - **Vanilla CSS with custom properties.** No Tailwind, no SCSS, no CSS-in-JS.
 - **Biome** for lint + format. **Vitest** for unit tests.
@@ -20,7 +22,7 @@ pnpm dev          # dev server (auto-detects free port)
 pnpm test         # vitest run (chip logic, parsePoint, locations)
 pnpm check        # svelte-check + tsc (whole repo)
 pnpm build        # Workers build (.svelte-kit/cloudflare)
-pnpm deploy       # build + wrangler deploy
+pnpm run deploy   # build + wrangler deploy (plain `pnpm deploy` is a pnpm builtin)
 pnpm og           # regen OG PNGs (only if state words/colours/og-mark change)
 pnpm subset       # regen headline font (only if state words change)
 pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
@@ -34,7 +36,7 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 - **State derivation is the API's `index` field**, not a locally-computed band. `very low`/`low → YES`, `moderate → SORT OF`, `high`/`very high → NO`. The API's national distribution is more authoritative than anything we'd compute.
 - **Region resolution priority** in `src/lib/server/region.ts`: URL `?postcode=` → Cloudflare `platform.cf.postalCode` via `getRequestEvent()` (when country is GB) → national fallback. Returns `{ region, source: 'url' | 'header' | 'national' }`; the route handler uses `source` to pick `cacheHeadersFor()`.
 - **DNO derivation:** `RegionInfo.dnoCode` (Octopus DNO letter A–P, no I) is auto-populated for regional responses by mapping the Carbon Intensity API's `regionid` (1–17) to the matching DNO via `dnoFromRegionId()` in `src/lib/agile.ts`. This lets `AgileOverlay` enable in a single click for users on a known region — no second region picker needed. National responses leave `dnoCode` undefined; the overlay falls back to its own dropdown.
-- **`?state=yes|sortof|no|unknown` is a debug-only override** in `+page.server.ts`. The `/api/now` JSON endpoint deliberately ignores it. Cache TTL is computed from the *real* state (pre-override), not the rendered state.
+- **`?state=yes|sortof|no|unknown` is a debug-only override** in `+page.server.ts`. The `/api/now` JSON endpoint deliberately ignores it. Cache TTL is computed from the _real_ state (pre-override), not the rendered state.
 
 ### Cache + abuse defence
 
@@ -63,9 +65,9 @@ pnpm icons        # regen PWA PNGs from src/lib/assets/bolt.png
 
 - **Brand mark source: `src/lib/assets/bolt.png`** (transparent background expected). `pnpm icons` reads it and writes 8 PNG sizes to `static/`.
 - **`/og.png` serves one of 4 pre-rendered PNGs** (`src/lib/assets/og/{state}.png`, from `og-mark.png`) via `read()`. Sharp can't run on Workers, so `pnpm og` renders them in Node — re-run it if state words, theme colours or the mark change.
-- **Service worker auto-registers** because `src/service-worker.ts` exists. Caches only 200 responses (no sticky 5xx), runtime cache capped at 32 entries FIFO, navigation fallback queries all caches via `caches.match('/')`. Use `pnpm preview` (not `pnpm dev`) to test SW behaviour locally.
+- **Service worker auto-registers** because `src/service-worker/index.ts` exists (own tsconfig extending `$app/tsconfig/service-worker`; `pnpm check` runs `tsc -p src/service-worker`). Precache list comes from `$app/manifest`. Caches only 200 responses (no sticky 5xx), runtime cache capped at 32 entries FIFO, navigation fallback queries all caches via `caches.match('/')`. Use `pnpm preview` (not `pnpm dev`) to test SW behaviour locally.
 - **Dev-mode SW safety net** in `+layout.svelte`: if a previous `pnpm preview` left a SW registered, it can serve stale HTML referencing production-hashed asset paths during a subsequent `pnpm dev` session — broken layout. The layout `$effect` detects any leftover registration in dev mode, unregisters it, purges all caches, and reloads once. Stripped from production builds via `import.meta.env.DEV`. No-op when no SW is registered (cannot loop).
-- **Production SW upgrade safety net** in `+layout.svelte`: when a new build's SW activates and calls `clients.claim()`, the page may have already rendered against the old build's HTML (referencing asset hashes the new SW's `PRECACHE_SET` doesn't have). The `controllerchange` listener detects the SW transition and reloads once. `alreadyHadController` guard prevents first-load reload-loop.
+- **Production SW upgrade safety net** in `+layout.svelte`: when a new build's SW activates and calls `clients.claim()`, the page may have already rendered against the old build's HTML (referencing asset hashes the new SW's `PRECACHE_SET` doesn't have). The `controllerchange` listener only flags the update; `beforeNavigate` then turns the next navigation into a full page load to its destination. Never reload in place: a reload landing mid-click aborts the navigation and reloads the current page. `alreadyHadController` guard ignores the first-visit claim.
 - **Critical-asset failure recovery** in `+layout.svelte`: if any `/_app/immutable/` resource 404s (the symptom of a SW stuck on a build whose hashes are gone from origin), the layout's resource-error capture handler unregisters the SW, purges all caches, and reloads. Guarded by `sessionStorage` so it cannot loop on unrecoverable errors.
 - **Octopus Agile product code** is hard-coded as `AGILE-24-10-01` in `src/lib/server/octopus.ts`. Octopus rolls these forward; if rates start coming back stale, fetch `/v1/products/?brand=OCTOPUS_ENERGY&is_variable=true` to find the current code.
 - **Skeleton loading pattern** in `AgileOverlay.svelte` — `.skeleton` blocks use `var(--surface-soft)` (token tints to currentColor automatically), 1.6 s opacity pulse (1.0 → 0.5 → 1.0), `aria-busy`, `.visually-hidden` text for screen readers. Reuse this shape for any future async loading state.
@@ -108,7 +110,7 @@ Reference: **isitchristmas.com** (Eric Mill / Konklone). Anti-references: corpor
 - **Body font:** `system-ui` everywhere else. No round-trip, no FOUT, deliberate typographic hierarchy.
 - **Palette:** Okabe-Ito-derived ternary state colours (green `#0E7C3A` / amber `#E69F00` / red `#B3261E`) plus slate `#1F2937` for unknown. WCAG AA on the paired text colour. Dark-mode variants nudged 10% lighter. Colour is paired with both a shape (filled circle / triangle / octagon / square) and a word — colour-blind users get the answer from any one of three signals.
 - **No gradients, no glassmorphism, no shadows, no rounded cards, no decorative sparklines.** The 24h forecast bar chart is functional, not decorative.
-- **Motion:** none on first paint. The state colour just *is*. The only acceptable motion is a 200 ms cross-fade if state changes while the page is open. `prefers-reduced-motion` is respected globally.
+- **Motion:** none on first paint. The state colour just _is_. The only acceptable motion is a 200 ms cross-fade if state changes while the page is open. `prefers-reduced-motion` is respected globally.
 
 ### Design Principles
 

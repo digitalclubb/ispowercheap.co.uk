@@ -1,4 +1,5 @@
-import { type Handle, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 
 /**
  * Per-pathname allowlist of query parameters that meaningfully affect the

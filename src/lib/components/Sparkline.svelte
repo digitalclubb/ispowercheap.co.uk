@@ -4,9 +4,9 @@
 		type BestWindow,
 		describeWindow,
 		FORECAST_WINDOW_PERIODS,
-	} from '$lib/forecast.js';
-	import { formatTime, formatTimeWithDay } from '$lib/format.js';
-	import type { CarbonIntensityPoint } from '$lib/types.js';
+	} from '#lib/forecast.js';
+	import { formatTime, formatTimeWithDay } from '#lib/format.js';
+	import type { CarbonIntensityPoint } from '#lib/types.js';
 
 	// `points[0]` is the half-hour underway now (server trims the past).
 	// `best` is the page's cheapest 3 h stretch — shared with the Outlook line.

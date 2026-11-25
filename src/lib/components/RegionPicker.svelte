@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { normalizeOutcode } from '$lib/postcode.js';
-	import type { RegionInfo } from '$lib/types.js';
+	import { normalizeOutcode } from '#lib/postcode.js';
+	import type { RegionInfo } from '#lib/types.js';
 
 	let { region }: { region: RegionInfo } = $props();
 

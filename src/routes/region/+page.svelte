@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Footer from '$lib/components/Footer.svelte';
-	import { CITY_LOCATIONS, REGION_LOCATIONS } from '$lib/locations.js';
-	import { itemListJsonLd, ORIGIN } from '$lib/seo.js';
+	import Footer from '#lib/components/Footer.svelte';
+	import { CITY_LOCATIONS, REGION_LOCATIONS } from '#lib/locations.js';
+	import { itemListJsonLd, ORIGIN } from '#lib/seo.js';
 
 	const canonicalUrl = `${ORIGIN}/region`;
 	const allLocationItems = [...REGION_LOCATIONS, ...CITY_LOCATIONS].map((l) => ({

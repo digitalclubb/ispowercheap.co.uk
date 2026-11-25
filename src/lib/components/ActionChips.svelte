@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { CHIPS, chipVerdict } from '$lib/chips.js';
-	import { FORECAST_WINDOW_PERIODS } from '$lib/forecast.js';
-	import { formatTimeWithDay } from '$lib/format.js';
-	import type { CarbonIntensityPoint } from '$lib/types.js';
+	import { CHIPS, chipVerdict } from '#lib/chips.js';
+	import { FORECAST_WINDOW_PERIODS } from '#lib/forecast.js';
+	import { formatTimeWithDay } from '#lib/format.js';
+	import type { CarbonIntensityPoint } from '#lib/types.js';
 
 	// Same 24 h window as the chart, so a chip never names a time the chart doesn't show.
 	let { points, now }: { points: CarbonIntensityPoint[]; now: string } = $props();

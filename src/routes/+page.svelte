@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import ActionChips from '$lib/components/ActionChips.svelte';
-	import AgileOverlay from '$lib/components/AgileOverlay.svelte';
-	import Footer from '$lib/components/Footer.svelte';
-	import Outlook from '$lib/components/Outlook.svelte';
-	import RegionPicker from '$lib/components/RegionPicker.svelte';
-	import Sparkline from '$lib/components/Sparkline.svelte';
-	import StateShape from '$lib/components/StateShape.svelte';
-	import Timestamps from '$lib/components/Timestamps.svelte';
-	import { alignToNow, cheapestWindow } from '$lib/forecast.js';
-	import { startPolling } from '$lib/livePolling.js';
-	import { describeAnswer, faqJsonLd, ORIGIN, websiteJsonLd } from '$lib/seo.js';
-	import { refineRegionSilently } from '$lib/silentGeo.js';
-	import { STATE_HEADLINE, STATE_WORD } from '$lib/state.js';
-	import { THEME_COLOR } from '$lib/theme.js';
-	import type { NowAnswer } from '$lib/types.js';
+	import ActionChips from '#lib/components/ActionChips.svelte';
+	import AgileOverlay from '#lib/components/AgileOverlay.svelte';
+	import Footer from '#lib/components/Footer.svelte';
+	import Outlook from '#lib/components/Outlook.svelte';
+	import RegionPicker from '#lib/components/RegionPicker.svelte';
+	import Sparkline from '#lib/components/Sparkline.svelte';
+	import StateShape from '#lib/components/StateShape.svelte';
+	import Timestamps from '#lib/components/Timestamps.svelte';
+	import { alignToNow, cheapestWindow } from '#lib/forecast.js';
+	import { startPolling } from '#lib/livePolling.js';
+	import { describeAnswer, faqJsonLd, ORIGIN, websiteJsonLd } from '#lib/seo.js';
+	import { refineRegionSilently } from '#lib/silentGeo.js';
+	import { STATE_HEADLINE, STATE_WORD } from '#lib/state.js';
+	import { THEME_COLOR } from '#lib/theme.js';
+	import type { NowAnswer } from '#lib/types.js';
 	import type { PageData } from './$types.js';
 
 	let { data }: { data: PageData } = $props();

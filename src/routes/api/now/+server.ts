@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { buildAnswer, cacheHeadersFor } from '$lib/server/answer.js';
+import { buildAnswer, cacheHeadersFor } from '#lib/server/answer.js';
 import type { RequestHandler } from './$types.js';
 
 /**

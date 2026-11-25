@@ -1,5 +1,5 @@
-import { LOCATIONS } from '$lib/locations.js';
-import { ORIGIN } from '$lib/seo.js';
+import { LOCATIONS } from '#lib/locations.js';
+import { ORIGIN } from '#lib/seo.js';
 import type { RequestHandler } from './$types.js';
 
 /**

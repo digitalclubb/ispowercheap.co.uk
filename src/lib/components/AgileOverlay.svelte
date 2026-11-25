@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type AgileSnapshot, DNO_REGIONS } from '$lib/agile.js';
+	import { type AgileSnapshot, DNO_REGIONS } from '#lib/agile.js';
 
 	interface Config {
 		enabled: boolean;

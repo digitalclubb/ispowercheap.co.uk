@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
-import { type AgileSnapshot, DNO_REGION_CODES } from '$lib/agile.js';
-import { fetchAgileRates } from '$lib/server/octopus.js';
+import { type AgileSnapshot, DNO_REGION_CODES } from '#lib/agile.js';
+import { fetchAgileRates } from '#lib/server/octopus.js';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async ({ url, fetch, setHeaders }) => {

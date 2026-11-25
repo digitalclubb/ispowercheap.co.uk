@@ -1,13 +1,10 @@
-/// <reference types="@sveltejs/kit" />
-/// <reference lib="webworker" />
-
-import { build, files, version } from '$service-worker';
-
-const sw = self as unknown as ServiceWorkerGlobalScope;
+import { version } from '$app/env';
+import { assets, immutable } from '$app/manifest';
+import { self as sw } from '$app/service-worker';
 
 const APP_CACHE = `app-${version}`;
 const RUNTIME_CACHE = `runtime-${version}`;
-const PRECACHE: readonly string[] = [...build, ...files];
+const PRECACHE: readonly string[] = [...immutable, ...assets].map(({ path }) => `/${path}`);
 const PRECACHE_SET = new Set(PRECACHE);
 
 sw.addEventListener('install', (event) => {
