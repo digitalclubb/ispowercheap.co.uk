@@ -114,9 +114,33 @@ GET <a href="/api/now?postcode=SW1A">https://ispowercheap.co.uk/api/now?postcode
 		</section>
 
 		<section>
+			<h2>why this is free</h2>
+			<p>
+				I built this because I wanted a straight answer to "should I put the
+				washing on now?" without opening an app or reading a dashboard. With
+				bills going up, that answer should be free for every household that
+				needs it.
+			</p>
+			<p>
+				There are no adverts, no paywall and no sign-up. I pay for the domain
+				and the hosting myself. If this has helped, you can
+				<a href="https://ko-fi.com/digitalclubb" target="_blank" rel="noopener noreferrer"
+					>buy me a coffee<span class="visually-hidden"> (opens in a new tab)</span></a
+				>
+				— it goes towards the running costs. If money's tight, please don't: the
+				site stays free either way.
+			</p>
+			<p class="byline">
+				Gareth Clubb ·
+				<a href="https://digitalclubb.com" rel="noopener noreferrer">digitalclubb.com</a>
+			</p>
+		</section>
+
+		<section>
 			<h2>privacy</h2>
 			<p>
-				No accounts, no tracking, no analytics, no cookie banner. Region detection
+				No accounts, no tracking, no analytics, no cookie banner. Nothing here is
+				sold or shared. Region detection
 				uses the IP-derived location header our host adds at the edge — never stored. If you
 				opt in to the postcode lookup via your browser, your latitude/longitude
 				is truncated to ~110 m before being sent to postcodes.io.
@@ -136,6 +160,10 @@ GET <a href="/api/now?postcode=SW1A">https://ispowercheap.co.uk/api/now?postcode
 		color: var(--state-unknown-fg);
 	}
 	.prose {
+		/* width: 100% — auto margins in the flex column otherwise size the
+		 * article to its widest line (the API URLs), overflowing phones. */
+		width: 100%;
+		box-sizing: border-box;
 		max-width: 64ch;
 		margin: 0 auto;
 		padding: var(--space-5)
@@ -187,6 +215,18 @@ GET <a href="/api/now?postcode=SW1A">https://ispowercheap.co.uk/api/now?postcode
 	.prose p {
 		margin: 0 0 var(--space-3) 0;
 		opacity: var(--opacity-secondary);
+	}
+	.prose .byline {
+		font-size: var(--micro-size);
+		opacity: var(--opacity-tertiary);
+	}
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 	.prose p:last-child {
 		margin-bottom: 0;
